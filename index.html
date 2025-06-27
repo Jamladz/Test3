@@ -132,6 +132,7 @@
             color: #e0e0e0;
         }
         
+        /* تأثيرات جديدة للزر لجذب الانتباه */
         .telegram-btn {
             display: inline-block;
             background: linear-gradient(135deg, #0088cc, #25D366);
@@ -142,7 +143,9 @@
             padding: 25px 70px;
             border-radius: 60px;
             margin: 40px 0;
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+            box-shadow: 
+                0 0 20px rgba(255, 215, 0, 0.7),
+                0 15px 30px rgba(0, 0, 0, 0.4);
             transition: all 0.4s ease;
             border: none;
             cursor: pointer;
@@ -150,16 +153,34 @@
             overflow: hidden;
             border: 3px solid rgba(255, 255, 255, 0.3);
             letter-spacing: 1px;
+            
+            /* تأثير اهتزاز وتكبير مستمر */
+            animation: vibrate 1.5s infinite ease-in-out, pulseShadow 2s infinite;
+            transform-origin: center;
+        }
+        
+        @keyframes vibrate {
+            0%, 100% { transform: translateY(0) scale(1); }
+            25% { transform: translateY(-5px) scale(1.05); }
+            50% { transform: translateY(0) scale(1); }
+            75% { transform: translateY(5px) scale(1.05); }
+        }
+        
+        @keyframes pulseShadow {
+            0% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.7), 0 15px 30px rgba(0, 0, 0, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.9), 0 20px 40px rgba(0, 0, 0, 0.6); }
+            100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.7), 0 15px 30px rgba(0, 0, 0, 0.4); }
         }
         
         .telegram-btn:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.9), 0 20px 40px rgba(0, 0, 0, 0.6);
             background: linear-gradient(135deg, #0077b6, #1DB954);
+            animation: none; /* إيقاف الحركة عند التحويم */
         }
         
         .telegram-btn:active {
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
         }
         
@@ -172,7 +193,7 @@
         
         @keyframes pulse {
             0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+            50% { transform: scale(1.2); }
             100% { transform: scale(1); }
         }
         
@@ -190,6 +211,18 @@
         
         .telegram-btn:hover::after {
             transform: rotate(30deg) translate(20%, 20%);
+        }
+        
+        /* تأثير وميض عند النقر */
+        .telegram-btn:focus {
+            outline: none;
+            animation: clickEffect 0.5s;
+        }
+        
+        @keyframes clickEffect {
+            0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(255, 215, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
         }
         
         .series-showcase {
