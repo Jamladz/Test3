@@ -1,0 +1,5 @@
+{
+  "name": "Tonew",
+  "description": "A Telegram Mini App advertising platform where users complete tasks to earn points, advertisers add tasks by paying in TON, integrated with TON Connect.",
+  "requestFramePermissions": []
+}
