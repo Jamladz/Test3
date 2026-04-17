@@ -1,10 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import WebApp from '@twa-dev/sdk';
 import { useTranslation } from 'react-i18next';
 import { TonConnectButton, useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
 import { Wallet, PlusCircle, Users, Play, Coins, Activity, Send, X, ExternalLink, Copy, Share2, Check, Home, ShieldCheck, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { LoadingScreen } from './components/LoadingScreen';
+import { auth, db, signInAnonymous } from './firebase';
+import { doc, getDoc, setDoc, updateDoc, increment, onSnapshot } from 'firebase/firestore';
 
 // FEED names instead of Bots
 const MOCK_NAMES = [
@@ -75,6 +77,7 @@ const LEADERBOARD = [
 
 export default function App() {
   const { t, i18n } = useTranslation();
+  const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState<string>('Guest');
   const [points, setPoints] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'home' | 'tasks' | 'ads' | 'invite'>('home');
@@ -106,7 +109,17 @@ export default function App() {
   // Referral state
   const [referralsCount, setReferralsCount] = useState(0);
   const [copied, setCopied] = useState(false);
-  const userId = WebApp.initDataUnsafe?.user?.id || WebApp.initDataUnsafe?.user?.username || '123456789';
+  // Fallback testing mechanism for browser previews without real telegram
+  const getSimulatedUserId = () => {
+    let devUserId = localStorage.getItem('tonew_dev_uid');
+    if (!devUserId) {
+       devUserId = 'dev_' + Math.random().toString(36).substring(7);
+       localStorage.setItem('tonew_dev_uid', devUserId);
+    }
+    return devUserId;
+  };
+
+  const userId = WebApp.initDataUnsafe?.user?.id || WebApp.initDataUnsafe?.user?.username || getSimulatedUserId();
   const refLink = `https://t.me/ToNewBot/app?startapp=${userId}`;
   const userWalletAddress = useTonAddress();
   const [tonConnectUI] = useTonConnectUI();
@@ -158,12 +171,74 @@ export default function App() {
     WebApp.expand();
 
     // Check if joined via referral
-    if (WebApp.initDataUnsafe?.start_param && String(WebApp.initDataUnsafe.start_param) !== String(userId)) {
-      setTimeout(() => {
-        WebApp.showAlert(t('refWelcome') || 'Welcome via referral! You received +500 XP.');
-        setPoints(p => p + 500);
-      }, 500);
-    }
+    const initFirebaseData = async () => {
+      const user = await signInAnonymous();
+      if (!user) return; // Auth failed
+
+      const tId = String(userId);
+      const userRef = doc(db, 'users', tId);
+      const userSnap = await getDoc(userRef);
+      
+      // Attempt to parse inviter ID from Telegram Context or URL Params (Browser testing fallback)
+      const urlParams = new URLSearchParams(window.location.search);
+      const startParam = WebApp.initDataUnsafe?.start_param || urlParams.get('tgWebAppStartParam') || urlParams.get('startapp');
+      const inviterId = startParam ? String(startParam) : null;
+
+      // Handle referral (We process referral if inviter exists AND inviter is not self AND referral doc hasn't been created)
+      if (inviterId && inviterId !== tId) {
+        const referralRef = doc(db, 'referrals', `${inviterId}_${tId}`);
+        const referralSnap = await getDoc(referralRef);
+        
+        // Only trigger referral bonus once
+        if (!referralSnap.exists()) {
+           try {
+            const inviterRef = doc(db, 'users', inviterId);
+             // Give both parties points safely
+            await setDoc(referralRef, {
+              inviterId: inviterId,
+              invitedId: tId,
+              createdAt: new Date().toISOString()
+            });
+
+            await updateDoc(inviterRef, {
+              points: increment(500),
+              referralsCount: increment(1)
+            });
+
+            // Update local user's points (if their doc exists, update it, else wait for creation)
+            if (userSnap.exists()) {
+               await updateDoc(userRef, { points: increment(500) });
+            }
+            WebApp.showAlert(t('refWelcome') || 'Welcome via referral! You received +500 XP.');
+           } catch (e) {
+             console.error("Referral process error", e);
+           }
+        }
+      }
+
+      if (!userSnap.exists()) {
+        // Create new user document
+        await setDoc(userRef, {
+          userId: tId,
+          points: (inviterId && inviterId !== tId) ? 500 : 0, // start with 500 if referred
+          referralsCount: 0,
+          invitedBy: (inviterId && inviterId !== tId) ? inviterId : null,
+          createdAt: new Date().toISOString()
+        });
+      }
+
+      // Realtime listener for this user
+      return onSnapshot(userRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setPoints(data.points || 0);
+          setReferralsCount(data.referralsCount || 0);
+        }
+      });
+    };
+    
+    let unsubListener: any;
+    initFirebaseData().then((unsub) => { unsubListener = unsub; });
 
     // Live withdrawals rotation
     const interval = setInterval(() => {
@@ -215,7 +290,12 @@ export default function App() {
         if (currentWatched < 10) {
            const newWatched = currentWatched + 1;
            setAdsWatched(newWatched);
-           setPoints((p: number) => p + 100);
+           // Firebase Sync
+           if (auth.currentUser) {
+             updateDoc(doc(db, 'users', String(userId)), { points: increment(100) }).catch(console.error);
+           } else {
+             setPoints((p: number) => p + 100);
+           }
            localStorage.setItem('tonew_ads_progress', newWatched.toString());
            WebApp.HapticFeedback.notificationOccurred('success');
         }
@@ -233,7 +313,14 @@ export default function App() {
       setTimeout(() => {
         const newCompleted = [...completedTasks, taskId];
         setCompletedTasks(newCompleted);
-        setPoints(p => p + reward);
+
+        // Firebase Sync
+        if (auth.currentUser) {
+          updateDoc(doc(db, 'users', String(userId)), { points: increment(reward) }).catch(console.error);
+        } else {
+          setPoints(p => p + reward);
+        }
+
         localStorage.setItem('tonew_completed_tasks', JSON.stringify(newCompleted));
         WebApp.HapticFeedback.notificationOccurred('success');
       }, 2000);
@@ -246,7 +333,12 @@ export default function App() {
         t('withdraw') || 'Withdrawal',
         `Withdrawal request sent for address:\n${withdrawAddress}\n\nProcessing takes up to 24 hours.`
       );
-      setPoints(p => p - 10000);
+      // Firebase Sync
+      if (auth.currentUser) {
+        updateDoc(doc(db, 'users', String(userId)), { points: increment(-10000) }).catch(console.error);
+      } else {
+        setPoints(p => p - 10000);
+      }
       setIsWalletModalOpen(false);
       setWithdrawAddress('');
     } else {
@@ -358,7 +450,10 @@ export default function App() {
 
   return (
     <div className={`h-[100dvh] w-full overflow-hidden flex flex-col bg-slate-900 text-slate-100 font-sans ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-      
+      <AnimatePresence>
+        {isLoading && <LoadingScreen onComplete={() => setIsLoading(false)} />}
+      </AnimatePresence>
+
       {/* 1. Header Area (Fixed Top) */}
       <header className="shrink-0 flex justify-between items-center px-4 py-3 bg-slate-800 rounded-b-[24px] shadow-[0_4px_16px_rgba(0,0,0,0.3)] z-40 relative">
         <div className="flex items-center space-x-3 rtl:space-x-reverse">
