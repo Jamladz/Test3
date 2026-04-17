@@ -1,0 +1,66 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user in the Ads Network mini-app.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Telegram user ID."
+        },
+        "points": {
+          "type": "number",
+          "description": "User's XP points."
+        },
+        "referralsCount": {
+          "type": "number",
+          "description": "Number of users referred by this user."
+        },
+        "invitedBy": {
+          "type": "string",
+          "description": "The telegram ID or Firebase UID of the inviter."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "points", "referralsCount", "createdAt"]
+    },
+    "Referral": {
+      "title": "Referral",
+      "description": "A record of a successful referral.",
+      "type": "object",
+      "properties": {
+        "inviterId": {
+          "type": "string",
+          "description": "The user ID of the person who invited."
+        },
+        "invitedId": {
+          "type": "string",
+          "description": "The user ID of the newly joined user."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["inviterId", "invitedId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Stores user profiles."
+    },
+    "/referrals/{referralId}": {
+      "schema": {
+        "$ref": "#/entities/Referral"
+      },
+      "description": "Stores referral tracking to prevent duplicate counting."
+    }
+  }
+}
