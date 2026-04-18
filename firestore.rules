@@ -1,18 +1,48 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAuthenticated() {
-       return request.auth != null;
+    match /{document=**} { 
+      allow read, write: if false; 
     }
 
-    match /users/{document=**} {
-      // For Telegram Mini App frontend prototyping, allow authenticated users to read/update points.
-      allow read, write: if isAuthenticated();
+    function isSignedIn() { return request.auth != null; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isValidUser() {
+      let data = incoming();
+      return data.keys().hasAll(['userId', 'points', 'referralsCount', 'createdAt'])
+          && data.userId is string 
+          && data.points is number
+          && data.referralsCount is number
+          && data.createdAt is string
+          && (data.keys().hasAll(['invitedBy']) ? (data.invitedBy is string || data.invitedBy == null) : true);
+    }
+    
+    function isValidReferral() {
+      let data = incoming();
+      return data.keys().hasAll(['inviterId', 'invitedId', 'createdAt'])
+          && data.inviterId is string
+          && data.invitedId is string
+          && data.createdAt is string;
     }
 
-    match /referrals/{document=**} {
-      allow read, write: if isAuthenticated();
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if isSignedIn() && isValidUser();
+      allow update: if isSignedIn() 
+          && (
+             incoming().diff(existing()).affectedKeys().hasOnly(['points', 'referralsCount'])
+             || incoming().diff(existing()).affectedKeys().hasOnly(['points'])
+          );
+    }
+
+    match /referrals/{referralId} {
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if isSignedIn() && isValidReferral();
+      allow update: if false;
     }
   }
 }
