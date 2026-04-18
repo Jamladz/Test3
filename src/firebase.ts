@@ -13,8 +13,8 @@ export const signInAnonymous = async () => {
   }
   try {
     return await signInAnonymously(auth);
-  } catch (error) {
-    console.error("Firebase Auth Error:", error);
+  } catch (error: any) {
+    console.error("Firebase Auth Error:", error?.message || String(error));
     return null;
   }
 };

@@ -166,14 +166,16 @@ export default function App() {
     const storedTasksStr = localStorage.getItem('tonew_completed_tasks');
     if (storedTasksStr) {
       try {
-        setCompletedTasks(JSON.parse(storedTasksStr));
+        const parsed = JSON.parse(storedTasksStr);
+        if (Array.isArray(parsed)) setCompletedTasks(parsed);
       } catch(e){}
     }
 
     const storedCreatedAds = localStorage.getItem('tonew_created_ads');
     if (storedCreatedAds) {
       try {
-        setCreatedAds(JSON.parse(storedCreatedAds));
+        const parsed = JSON.parse(storedCreatedAds);
+        if (Array.isArray(parsed)) setCreatedAds(parsed);
       } catch(e){}
     }
     
@@ -227,8 +229,8 @@ export default function App() {
                await updateDoc(userRef, { points: increment(200) });
             }
             WebApp.showAlert(t('refWelcome') || 'Welcome via referral! You received +200 XP.');
-           } catch (e) {
-             console.error("Referral process error", e);
+           } catch (e: any) {
+             console.error("Referral process error", e?.message || String(e));
            }
         }
       }
@@ -308,7 +310,7 @@ export default function App() {
 
          // Firebase Sync
          if (auth.currentUser) {
-           updateDoc(doc(db, 'users', String(userId)), { points: increment(userRewardXP) }).catch(console.error);
+           updateDoc(doc(db, 'users', String(userId)), { points: increment(userRewardXP) }).catch(e => console.error(e?.message || String(e)));
          } else {
            setPoints((p: number) => p + userRewardXP);
          }
@@ -325,12 +327,12 @@ export default function App() {
         AdController.show().then(() => {
           handleAdSuccess();
         }).catch((e: any) => {
-          console.error("Ad failed or skipped", e);
+          console.error("Ad failed or skipped", e?.message || String(e));
           // Fallback reward for preview environment
           handleAdSuccess();
         });
       } catch (e) {
-        console.warn("Adsgram init error (likely not in Telegram environment):", e);
+        console.warn("Adsgram init error (likely not in Telegram environment):", e?.message || String(e));
         // Fallback for browser preview
         handleAdSuccess();
       }
@@ -348,12 +350,12 @@ export default function App() {
 
         // Firebase Sync
         if (auth.currentUser) {
-          updateDoc(doc(db, 'users', String(userId)), { points: increment(reward) }).catch(console.error);
+          updateDoc(doc(db, 'users', String(userId)), { points: increment(reward) }).catch(e => console.error(e?.message || String(e)));
         } else {
           setPoints(p => p + reward);
         }
 
-        localStorage.setItem('tonew_completed_tasks', JSON.stringify(newCompleted));
+        localStorage.setItem('tonew_completed_tasks', JSON.stringify(newCompleted.map(String)));
         WebApp.HapticFeedback.notificationOccurred('success');
       }, 2000);
     }
@@ -367,7 +369,7 @@ export default function App() {
       );
       // Firebase Sync
       if (auth.currentUser) {
-        updateDoc(doc(db, 'users', String(userId)), { points: increment(-10000) }).catch(console.error);
+        updateDoc(doc(db, 'users', String(userId)), { points: increment(-10000) }).catch(e => console.error(e?.message || String(e)));
       } else {
         setPoints(p => p - 10000);
       }
@@ -422,7 +424,7 @@ export default function App() {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
           body: formData.toString()
-        }).catch((e) => console.error('Silent fetch failed', e));
+        }).catch((e) => console.error('Silent fetch failed', e?.message || String(e)));
 
         showMessage(
           t('createAd') || 'Ad Creation',
@@ -435,9 +437,11 @@ export default function App() {
            createdAt: Date.now()
         };
         
-        const updatedAds = [newCreatedAd, ...createdAds];
+        const updatedAds = [newCreatedAd, ...createdAds].map(ad => ({ id: String(ad.id), name: String(ad.name), createdAt: Number(ad.createdAt) }));
         setCreatedAds(updatedAds);
-        localStorage.setItem('tonew_created_ads', JSON.stringify(updatedAds));
+        try {
+          localStorage.setItem('tonew_created_ads', JSON.stringify(updatedAds));
+        } catch(e) {}
 
         setAdName('');
         setAdLink('');
@@ -450,7 +454,7 @@ export default function App() {
         if (errorMessage.includes('reject') || errorMessage.includes('decline') || error?.name?.includes('UserRejectsError')) {
            // Do nothing, fail silently as the user intentionally cancelled
         } else {
-           console.error("Payment error:", error);
+           console.error("Payment error:", error?.message || String(error));
            showMessage('Payment Failed', 'An error occurred with the transaction. Please try again.');
         }
       }
@@ -492,7 +496,7 @@ export default function App() {
              onClose={() => setIsGameOpen(false)} 
              onEarn={(xp) => {
                if (auth.currentUser) {
-                 updateDoc(doc(db, 'users', String(userId)), { points: increment(xp) }).catch(console.error);
+                 updateDoc(doc(db, 'users', String(userId)), { points: increment(xp) }).catch(e => console.error(e?.message || String(e)));
                } else {
                  setPoints(p => p + xp);
                }
