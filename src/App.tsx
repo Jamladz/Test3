@@ -257,7 +257,13 @@ export default function App() {
     };
     
     let unsubListener: any;
-    initFirebaseData().then((unsub) => { unsubListener = unsub; });
+    initFirebaseData().then((unsub) => { 
+      unsubListener = unsub; 
+      setIsLoading(false);
+    }).catch((e) => {
+      console.error(e);
+      setIsLoading(false);
+    });
 
     // Live withdrawals rotation
     const interval = setInterval(() => {
@@ -487,7 +493,7 @@ export default function App() {
   return (
     <div className={`h-[100dvh] w-full overflow-hidden flex flex-col bg-slate-900 text-slate-100 font-sans ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
       <AnimatePresence>
-        {isLoading && <AppLoadingScreen onComplete={() => setIsLoading(false)} />}
+        {isLoading && <AppLoadingScreen />}
       </AnimatePresence>
 
       <AnimatePresence>
