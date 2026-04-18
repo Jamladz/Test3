@@ -120,7 +120,13 @@ export const MiniGame = ({ onClose, onEarn }: { onClose: () => void, onEarn: (xp
       const newBoard = board.map(t => t.id === clickedTile.id ? { ...t, active: false } : t);
       
       let newTray = [...tray];
-      const insertIndex = newTray.findLastIndex(t => t.imgIndex === clickedTile.imgIndex);
+      let insertIndex = -1;
+      for (let i = newTray.length - 1; i >= 0; i--) {
+          if (newTray[i].imgIndex === clickedTile.imgIndex) {
+              insertIndex = i;
+              break;
+          }
+      }
       
       if (insertIndex !== -1) {
           newTray.splice(insertIndex + 1, 0, clickedTile);
@@ -179,10 +185,10 @@ export const MiniGame = ({ onClose, onEarn }: { onClose: () => void, onEarn: (xp
               setIsAdLoading(false);
               action();
           } catch (e) {
-              console.error("Ad skipped or failed to load", e);
+              console.warn("Ad skipped, failed or environment error:", e);
               setIsAdLoading(false);
-              // Inform user
-              try { WebApp.HapticFeedback.notificationOccurred('error'); } catch(err){}
+              // Fallback for preview/AI Studio environment out of Telegram
+              action();
           }
       } else {
           // If no adsgram available (local env/demo), just run action
