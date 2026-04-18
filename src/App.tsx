@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { TonConnectButton, useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
 import { Wallet, PlusCircle, Users, Play, Coins, Activity, Send, X, ExternalLink, Copy, Share2, Check, Home, ShieldCheck, Clock, Gamepad2, Trophy } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { LoadingScreen } from './components/LoadingScreen';
-import { MiniGame } from './components/MiniGame';
+import { AppLoadingScreen } from './components/AppLoadingScreen';
+import { AppMiniGame } from './components/AppMiniGame';
 import { auth, db, signInAnonymous } from './firebase';
 import { doc, getDoc, setDoc, updateDoc, increment, onSnapshot } from 'firebase/firestore';
 
@@ -483,12 +483,12 @@ export default function App() {
   return (
     <div className={`h-[100dvh] w-full overflow-hidden flex flex-col bg-slate-900 text-slate-100 font-sans ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
       <AnimatePresence>
-        {isLoading && <LoadingScreen onComplete={() => setIsLoading(false)} />}
+        {isLoading && <AppLoadingScreen onComplete={() => setIsLoading(false)} />}
       </AnimatePresence>
 
       <AnimatePresence>
         {isGameOpen && (
-           <MiniGame 
+           <AppMiniGame 
              onClose={() => setIsGameOpen(false)} 
              onEarn={(xp) => {
                if (auth.currentUser) {
