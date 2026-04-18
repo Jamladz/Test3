@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+@theme {
+  --color-indigo-50: #eef2ff;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  @apply bg-slate-900 text-white;
+}

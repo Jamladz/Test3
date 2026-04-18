@@ -1,14 +1,16 @@
-import {StrictMode} from 'react';
-import {createRoot} from 'react-dom/client';
-import App from './App.tsx';
-import './index.css';
-import './i18n';
-import { TonConnectUIProvider } from '@tonconnect/ui-react';
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.tsx'
+import './index.css'
+import './i18n'
+import { TonConnectUIProvider } from '@tonconnect/ui-react'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <TonConnectUIProvider manifestUrl="https://raw.githubusercontent.com/Jamladz/Test3/main/tonconnect-manifest.json">
+const manifestUrl = 'https://ton-connect.github.io/demo-dapp-with-react-ui/tonconnect-manifest.json';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <TonConnectUIProvider manifestUrl={manifestUrl}>
       <App />
     </TonConnectUIProvider>
-  </StrictMode>,
-);
+  </React.StrictMode>,
+)
