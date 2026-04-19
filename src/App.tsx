@@ -419,10 +419,9 @@ export default function App() {
   const ADS_WHEEL_ID = "int-28173";
 
   const triggerAd = () => {
-    // @ts-ignore
-    if (window.Adsgram) {
-      // @ts-ignore
-      const AdController = window.Adsgram.init({ blockId: ADS_WATCH_ID });
+    const Adsgram = (window as any).Adsgram;
+    if (Adsgram) {
+      const AdController = Adsgram.init({ blockId: ADS_WATCH_ID });
       AdController.show().then(() => {
         const today = new Date().toDateString();
         let currentWatched = adsWatched;
@@ -440,31 +439,47 @@ export default function App() {
         try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
       }).catch((e: any) => {
         console.error("Ad failed", e);
-        WebApp.showAlert("Ad failed to load or was skipped.");
+        WebApp.showAlert(t('adError') || "Failed to load ad. Please try again.");
       });
     } else {
-      WebApp.showAlert("Ads are only available in the Telegram app.");
-      // For development/preview ONLY if you want to test the flow:
-      // handleAdSuccessSimulated(); 
+      // Check if we're in Telegram but script isn't ready
+      if (WebApp.platform !== 'unknown') {
+        WebApp.showAlert(t('adNotReady') || "Ad system is loading... Please try again in a few seconds.");
+      } else {
+        // Desktop / Preview fallback to allow testing without white screen
+        WebApp.showConfirm("Ads require Telegram app. Simulate success for testing?", (confirmed) => {
+          if (confirmed) {
+            const today = new Date().toDateString();
+            if (adsWatched < WATCH_LIMIT) {
+              setAdsWatched(prev => prev + 1);
+              setLastAdDate(today);
+            }
+          }
+        });
+      }
     }
   };
 
   const triggerWheelAd = () => {
-    // @ts-ignore
-    if (window.Adsgram) {
-      // @ts-ignore
-      const AdController = window.Adsgram.init({ blockId: ADS_WHEEL_ID });
+    const Adsgram = (window as any).Adsgram;
+    if (Adsgram) {
+      const AdController = Adsgram.init({ blockId: ADS_WHEEL_ID });
       AdController.show().then(() => {
         setAdSpinsCount(prev => prev + 1);
         localStorage.setItem('tonew_wheel_ad_spins', (adSpinsCount + 1).toString());
         WebApp.HapticFeedback.notificationOccurred('success');
-        WebApp.showAlert("Added +1 Wheel Spin!");
+        WebApp.showAlert("+1 Spin Added!");
       }).catch((e: any) => {
         console.error("Wheel ad failed", e);
-        WebApp.showAlert("Ad placement failed. Please try again.");
+        WebApp.showAlert(t('adError') || "Ad placement failed.");
       });
     } else {
-      WebApp.showAlert("Ads are unavailable in this environment.");
+      if (WebApp.platform !== 'unknown') {
+        WebApp.showAlert(t('adNotReady') || "Loading ad system...");
+      } else {
+        setAdSpinsCount(prev => prev + 1);
+        WebApp.showAlert("DEBUG: +1 Spin Added (Simulated)");
+      }
     }
   };
 
