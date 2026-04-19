@@ -180,7 +180,7 @@ export const AppMiniGame = ({ onClose, onEarn }: { onClose: () => void, onEarn: 
           setIsAdLoading(true);
           try {
               // @ts-ignore
-              const AdController = window.Adsgram.init({ blockId: "int-28074" });
+              const AdController = window.Adsgram.init({ blockId: "int-28175" });
               await AdController.show();
               setIsAdLoading(false);
               action();
