@@ -186,16 +186,19 @@ export const AppMiniGame = ({ onClose, onEarn }: { onClose: () => void, onEarn: 
           } catch (e) {
               console.warn("Ad skipped or failed:", e?.message || String(e));
               setIsAdLoading(false);
-              WebApp.showAlert(t('adError') || "Ad failed. Please try again.");
+              const errMsg = t('adError') || "Ad failed. Please try again.";
+              try {
+                  if (WebApp.isVersionAtLeast('6.2')) {
+                      WebApp.showAlert(errMsg);
+                  } else {
+                      alert(errMsg);
+                  }
+              } catch (err) {
+                  alert(errMsg);
+              }
           }
       } else {
-          // Check if in telegram, show loading message if script not ready
-          if (WebApp.platform !== 'unknown') {
-              WebApp.showAlert(t('adNotReady') || "Ad system is initializing...");
-          } else {
-              // Simulated success for preview/web testing
-              action();
-          }
+          console.warn("Adsgram not available (Real ads only in Telegram)");
       }
   };
 
