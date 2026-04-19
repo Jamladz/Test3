@@ -26,6 +26,12 @@ i18n.use(initReactI18next).init({
         internalWallet: "Internal Wallet",
         convert: "Convert",
         tonBalance: "TON Balance",
+        luckyWheel: "Lucky Wheel",
+        spin: "Spin",
+        freeSpin: "Free Spin",
+        adSpin: "Spin with Ad",
+        wheelResult: "You won {{reward}}!",
+        wheelLimit: "Limit reached for today",
       }
     },
     ar: {
@@ -51,6 +57,12 @@ i18n.use(initReactI18next).init({
         internalWallet: "المحفظة الداخلية",
         convert: "تحويل",
         tonBalance: "رصيد TON",
+        luckyWheel: "عجلة الحظ",
+        spin: "تدوير",
+        freeSpin: "تدوير مجاني",
+        adSpin: "تدوير بمشاهدة إعلان",
+        wheelResult: "لقد ربحت {{reward}}!",
+        wheelLimit: "تم الوصول للحد اليومي",
       }
     },
     ru: {
@@ -76,6 +88,12 @@ i18n.use(initReactI18next).init({
         internalWallet: "Внутренний кошелек",
         convert: "Обменять",
         tonBalance: "Баланс TON",
+        luckyWheel: "Колесо удачи",
+        spin: "Крутить",
+        freeSpin: "Бесплатно",
+        adSpin: "Крутить за рекламу",
+        wheelResult: "Вы выиграли {{reward}}!",
+        wheelLimit: "Лимит на сегодня пройден",
       }
     }
   },

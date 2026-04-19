@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import WebApp from '@twa-dev/sdk';
 import { useTranslation } from 'react-i18next';
 import { TonConnectButton, useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
-import { Wallet, PlusCircle, Users, Play, Coins, Activity, Send, X, ExternalLink, Copy, Share2, Check, Home, ShieldCheck, Clock, Gamepad2, Trophy, Bell, FileText, Megaphone, Gift, ChevronRight, Folder, Globe, ArrowRightLeft } from 'lucide-react';
+import { Wallet, PlusCircle, Users, Play, Coins, Activity, Send, X, ExternalLink, Copy, Share2, Check, Home, ShieldCheck, Clock, Gamepad2, Trophy, Bell, FileText, Megaphone, Gift, ChevronRight, Folder, Globe, ArrowRightLeft, Sparkles, RefreshCw, Instagram, Youtube } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AppLoadingScreen } from './components/AppLoadingScreen';
 import { AppMiniGame } from './components/AppMiniGame';
@@ -31,6 +31,18 @@ const generateMockFeed = () => {
     amount: generateWithdrawalAmount(),
     id: Math.random().toString(36).substring(7)
   }));
+};
+
+export const SocialIcon = ({ type, className }: { type?: string, className?: string }) => {
+  if (type === 'instagram') return <Instagram className={className} />;
+  if (type === 'youtube') return <Youtube className={className} />;
+  if (type === 'telegram') return <Send className={className} />;
+  if (type === 'tiktok') return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+       <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.17-2.81-.74-3.94-1.69-.17-.14-.33-.28-.48-.43v6.57c.02 2.57-.73 5.31-3.07 6.78-2.61 1.68-6.4 1.4-8.4-1.12-1.77-2.22-1.2-5.91.95-7.56 1.44-1.12 3.33-1.32 5-1.04v4.03c-1.13-.19-2.34-.03-3.21.78-.9.84-.71 2.37.28 2.94.99.57 2.41.34 3.01-.65.25-.41.35-.9.34-1.38V.02h.02z" />
+    </svg>
+  );
+  return <ExternalLink className={className} />;
 };
 
 export const XpIcon = ({ className }: { className?: string }) => (
@@ -134,12 +146,40 @@ export default function App() {
   
   // Tasks System
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
+  const [pendingTasks, setPendingTasks] = useState<Record<string, number>>({});
   const [lastAdDate, setLastAdDate] = useState<string>('');
   const [adTasks, setAdTasks] = useState([
-    { id: 't1', title: 'Join CryptoX Channel', reward: 50, link: 'https://t.me/toncoin' },
-    { id: 't2', title: 'Follow TON Updates', reward: 50, link: 'https://t.me/toncoin' },
-    { id: 't3', title: 'Like Pinned Post', reward: 50, link: 'https://t.me/toncoin' },
+    { id: 'ig1', title: 'Follow Law with Sarah', reward: 50, link: 'https://www.instagram.com/law_with_sarah?igsh=eDlqOW50MW95YjNq', type: 'instagram' },
+    { id: 'ig2', title: 'Follow n68g9bg8ic', reward: 50, link: 'https://www.instagram.com/n68g9bg8ic?igsh=Y29wM3BqMDA4aDQ=', type: 'instagram' },
+    { id: 'ig3', title: 'Follow Abiir', reward: 50, link: 'https://www.instagram.com/abiir438?igsh=MXVjMWkweW0xcmRrNw==', type: 'instagram' },
+    { id: 'ig4', title: 'Follow Irina Lorak', reward: 50, link: 'https://www.instagram.com/lorak.irina?igsh=MXdtbzl3aHIxN3Bzcw==', type: 'instagram' },
+    { id: 'ig5', title: 'Follow Oumaymma', reward: 50, link: 'https://www.instagram.com/oumaymma.90?igsh=MWhpcnpvc2lhMHp6bw==', type: 'instagram' },
+    { id: 'tk1', title: 'Follow Crypto Masun', reward: 50, link: 'https://www.tiktok.com/@cryptomasun?_r=1&_t=ZN-95g0IJeYC9e', type: 'tiktok' },
+    { id: 'tk2', title: 'Follow Roccos Crypto', reward: 50, link: 'https://www.tiktok.com/@roccoscrpto?_r=1&_t=ZN-95g0HSc5gEI', type: 'tiktok' },
+    { id: 'yt1', title: 'Sub Crypto Master', reward: 50, link: 'https://youtube.com/@cryptomaster7452?si=wf_FY_zvTeLfcrks', type: 'youtube' },
+    { id: 'yt2', title: 'Sub Martin Millionz', reward: 50, link: 'https://youtube.com/@martinmillionz?si=Lr3eciTRtnykpXhv', type: 'youtube' },
+    { id: 'yt3', title: 'Sub Jesse Eckel', reward: 50, link: 'https://youtube.com/@jesseeckel2?si=k3b47dAcbl4Isjmn', type: 'youtube' },
+    { id: 'tg1', title: 'Join HRUM Fam', reward: 50, link: 'https://t.me/hrumfam', type: 'telegram' },
+    { id: 'tg2', title: 'Join Time Farm', reward: 50, link: 'https://t.me/TimeFarmChannel', type: 'telegram' },
+    { id: 'tg3', title: 'Join Portals Community', reward: 50, link: 'https://t.me/portals_community', type: 'telegram' },
   ]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPendingTasks(prev => {
+        const next = { ...prev };
+        let changed = false;
+        Object.keys(next).forEach(id => {
+          if (next[id] > 0) {
+            next[id] -= 1;
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
   
   // Withdraw Modal & Game
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
@@ -147,6 +187,9 @@ export default function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [isGameOpen, setIsGameOpen] = useState(false);
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
+  const [isWheelOpen, setIsWheelOpen] = useState(false);
+  const [lastWheelDate, setLastWheelDate] = useState('');
+  const [adSpinsCount, setAdSpinsCount] = useState(0);
   const [adsWatched, setAdsWatched] = useState(0);
 
   // Notifications State
@@ -234,6 +277,12 @@ export default function App() {
         if (Array.isArray(parsed)) setCompletedTasks(parsed);
       } catch(e){}
     }
+
+    // Wheel state
+    const storedLastWheelDate = localStorage.getItem('tonew_last_wheel_date') || '';
+    const storedAdSpins = localStorage.getItem('tonew_wheel_ad_spins') || '0';
+    setLastWheelDate(storedLastWheelDate);
+    setAdSpinsCount(Number(storedAdSpins) || 0);
 
     const storedCreatedAds = localStorage.getItem('tonew_created_ads');
     if (storedCreatedAds) {
@@ -365,44 +414,100 @@ export default function App() {
   const changeLanguage = (lng: string) => i18n.changeLanguage(lng);
 
   const WATCH_LIMIT = 3;
-  const XP_REWARD_AFTER_3 = 1000;
+  const XP_REWARD_AFTER_3 = 100;
+  const ADSGRAM_BLOCK_ID = "int-28074";
 
   const triggerAd = () => {
-    const handleAdSuccess = () => {
-      const today = new Date().toDateString();
-      let currentWatched = adsWatched;
-      if (lastAdDate !== today) {
-         currentWatched = 0;
-         setLastAdDate(today);
-         localStorage.setItem('tonew_last_ad', today);
-      }
-      
-      if (currentWatched < WATCH_LIMIT) {
-         const newWatched = currentWatched + 1;
-         setAdsWatched(newWatched);
-         localStorage.setItem('tonew_ads_progress', newWatched.toString());
-      }
-    };
-
     // @ts-ignore
     if (window.Adsgram) {
-      try {
-        // @ts-ignore
-        const AdController = window.Adsgram.init({ blockId: "int-28074" });
-        AdController.show().then(() => {
-          handleAdSuccess();
-        }).catch((e: any) => {
-          console.error("Ad failed or skipped", e?.message || String(e));
-          // Fallback reward for preview environment
-          handleAdSuccess();
-        });
-      } catch (e: any) {
-        console.warn("Adsgram init error:", e?.message || String(e));
-        handleAdSuccess();
-      }
+      // @ts-ignore
+      const AdController = window.Adsgram.init({ blockId: ADSGRAM_BLOCK_ID });
+      AdController.show().then(() => {
+        const today = new Date().toDateString();
+        let currentWatched = adsWatched;
+        if (lastAdDate !== today) {
+           currentWatched = 0;
+           setLastAdDate(today);
+           localStorage.setItem('tonew_last_ad', today);
+        }
+        
+        if (currentWatched < WATCH_LIMIT) {
+           const newWatched = currentWatched + 1;
+           setAdsWatched(newWatched);
+           localStorage.setItem('tonew_ads_progress', newWatched.toString());
+        }
+        try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
+      }).catch((e: any) => {
+        console.error("Ad failed", e);
+        WebApp.showAlert("Ad failed to load or was skipped.");
+      });
     } else {
-      setTimeout(handleAdSuccess, 600);
+      WebApp.showAlert("Ads are only available in the Telegram app.");
+      // For development/preview ONLY if you want to test the flow:
+      // handleAdSuccessSimulated(); 
     }
+  };
+
+  const triggerWheelAd = () => {
+    // @ts-ignore
+    if (window.Adsgram) {
+      // @ts-ignore
+      const AdController = window.Adsgram.init({ blockId: ADSGRAM_BLOCK_ID });
+      AdController.show().then(() => {
+        setAdSpinsCount(prev => prev + 1);
+        localStorage.setItem('tonew_wheel_ad_spins', (adSpinsCount + 1).toString());
+        WebApp.HapticFeedback.notificationOccurred('success');
+        WebApp.showAlert("Added +1 Wheel Spin!");
+      }).catch((e: any) => {
+        console.error("Wheel ad failed", e);
+        WebApp.showAlert("Ad placement failed. Please try again.");
+      });
+    } else {
+      WebApp.showAlert("Ads are unavailable in this environment.");
+    }
+  };
+
+  const spinWheel = () => {
+    const rewards = [
+      { id: 0, label: '5 XP', type: 'xp', value: 5, weight: 40 },
+      { id: 1, label: '10 XP', type: 'xp', value: 10, weight: 30 },
+      { id: 2, label: '15 XP', type: 'xp', value: 15, weight: 20 },
+      { id: 3, label: '0.005 TON', type: 'ton', value: 0.005, weight: 10 },
+      { id: 4, label: '50 XP', type: 'xp', value: 50, weight: 0 },
+      { id: 5, label: '1000 XP', type: 'xp', value: 1000, weight: 0 },
+      { id: 6, label: '1 TON', type: 'ton', value: 1, weight: 0 },
+      { id: 7, label: '15 TON', type: 'ton', value: 15, weight: 0 },
+    ];
+
+    const today = new Date().toDateString();
+    const canFree = lastWheelDate !== today;
+    const canAd = adSpinsCount > 0;
+
+    if (!canFree && !canAd) return;
+
+    // Use free spin first
+    if (canFree) {
+      setLastWheelDate(today);
+      localStorage.setItem('tonew_last_wheel_date', today);
+    } else {
+      setAdSpinsCount(prev => prev - 1);
+      localStorage.setItem('tonew_wheel_ad_spins', (adSpinsCount - 1).toString());
+    }
+
+    // Weighted random
+    const totalWeight = rewards.reduce((acc, r) => acc + r.weight, 0);
+    let random = Math.random() * totalWeight;
+    let selected: any = rewards[0];
+    
+    for (const r of rewards) {
+      if (random < r.weight) {
+        selected = r;
+        break;
+      }
+      random -= r.weight;
+    }
+
+    return selected;
   };
 
   const claimAdReward = () => {
@@ -420,23 +525,87 @@ export default function App() {
     }
   };
 
-  const completeTask = (taskId: string, reward: number, link: string) => {
-    if (!completedTasks.includes(taskId)) {
-      WebApp.openTelegramLink(link || 'https://t.me/toncoin');
-      setTimeout(() => {
-        const newCompleted = [...completedTasks, taskId];
-        setCompletedTasks(newCompleted);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [rotation, setRotation] = useState(0);
 
-        // Firebase Sync
+  const handleStartSpin = () => {
+    if (isSpinning) return;
+    
+    const result = spinWheel();
+    if (!result) {
+      if (adSpinsCount === 0) {
+        WebApp.showConfirm("You used your daily free spin. Want to spin again by watching an ad?", (ok) => {
+          if (ok) triggerWheelAd();
+        });
+      }
+      return;
+    }
+
+    setIsSpinning(true);
+    // Calculate final rotation logic
+    // Each segment is 360 / 8 = 45 degrees
+    // We want the wheel to spin several times then land on the segment
+    const extraSpins = 5 + Math.floor(Math.random() * 5);
+    const segmentAngle = 45;
+    const targetAngle = 360 - (result.id * segmentAngle);
+    const finalRotation = (extraSpins * 360) + targetAngle;
+    
+    setRotation(finalRotation);
+
+    setTimeout(() => {
+      setIsSpinning(false);
+      // Give reward
+      if (result.type === 'xp') {
         if (auth.currentUser) {
-          updateDoc(doc(db, 'users', String(userId)), { points: increment(reward) }).catch(e => console.error(e?.message || String(e)));
+          updateDoc(doc(db, 'users', String(userId)), { points: increment(result.value) }).catch(e => console.error(e));
         } else {
-          setPoints(p => p + reward);
+          setPoints(p => p + result.value);
         }
+      } else {
+        if (auth.currentUser) {
+          updateDoc(doc(db, 'users', String(userId)), { tonBalance: increment(result.value) }).catch(e => console.error(e));
+        } else {
+          setTonBalance(b => b + result.value);
+        }
+      }
+      
+      WebApp.HapticFeedback.notificationOccurred('success');
+      showMessage("Congratulations!", `You won ${result.label}!`);
+      // Reset rotation for next time or keep it
+    }, 4000);
+  };
 
-        localStorage.setItem('tonew_completed_tasks', JSON.stringify(newCompleted.map(String)));
-        WebApp.HapticFeedback.notificationOccurred('success');
-      }, 2000);
+  const startTask = (taskId: string, link: string) => {
+    if (completedTasks.includes(taskId)) return;
+    if (link.includes('t.me')) {
+      WebApp.openTelegramLink(link);
+    } else {
+      WebApp.openLink(link);
+    }
+    setPendingTasks(prev => ({ ...prev, [taskId]: 7 }));
+  };
+
+  const completeTask = (taskId: string, reward: number) => {
+    if (!completedTasks.includes(taskId)) {
+      const newCompleted = [...completedTasks, taskId];
+      setCompletedTasks(newCompleted);
+
+      // Firebase Sync
+      if (auth.currentUser) {
+        updateDoc(doc(db, 'users', String(userId)), { points: increment(reward) }).catch(e => console.error(e?.message || String(e)));
+      } else {
+        setPoints(p => p + reward);
+      }
+
+      localStorage.setItem('tonew_completed_tasks', JSON.stringify(newCompleted.map(String)));
+      WebApp.HapticFeedback.notificationOccurred('success');
+      
+      // Cleanup pending state
+      setPendingTasks(prev => {
+        const next = { ...prev };
+        delete next[taskId];
+        return next;
+      });
     }
   };
 
@@ -810,12 +979,35 @@ export default function App() {
             </div>
 
             {/* Daily Task Section */}
-            <div>
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 ml-2 flex items-center">
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-2 flex items-center">
                 <Play className="w-4 h-4 mr-1.5 rtl:ml-1.5 rtl:mr-0 text-pink-400" />
                 {t('dailyTask')}
               </h3>
               
+              {/* Lucky Wheel Entry */}
+              <div 
+                onClick={() => setIsWheelOpen(true)}
+                className="bg-slate-800/80 backdrop-blur-sm border-2 border-slate-700/50 p-4 rounded-[28px] shadow-lg flex items-center active:scale-[0.98] transition-all cursor-pointer group relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="flex items-center flex-1 z-10">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mr-3 rtl:ml-3 rtl:mr-0 shadow-lg group-hover:rotate-12 transition-transform border border-indigo-400/20">
+                    <Sparkles className="text-white w-7 h-7" />
+                  </div>
+                  <div className="flex-1 pr-2 rtl:pl-2 rtl:pr-0">
+                    <p className="font-extrabold text-sm text-slate-100">{t('luckyWheel')}</p>
+                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tight flex items-center">
+                       Win up to <span className="text-emerald-400 mx-1">15 TON</span> or <span className="text-amber-400 mx-1">1000 XP</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="z-10 bg-slate-700/50 p-2 rounded-xl text-slate-300 group-hover:text-white transition-colors group-hover:bg-slate-700">
+                  <ChevronRight className="w-5 h-5 rtl:rotate-180" />
+                </div>
+              </div>
+
+              {/* Adsgram Daily Task */}
               <div className="bg-slate-800 rounded-[24px] p-2 border-b-[4px] border-slate-900 shadow-md flex items-center justify-between">
                 <div className="flex items-center flex-1">
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center mr-3 rtl:ml-3 rtl:mr-0 shadow-inner">
@@ -823,7 +1015,7 @@ export default function App() {
                   </div>
                   <div className="flex-1 pr-2 rtl:pl-2 rtl:pr-0">
                     <p className="font-extrabold text-sm text-slate-100">{t('sponsorTasks')} <span className="text-[10px] bg-slate-900/50 px-1.5 py-0.5 rounded ml-1 font-mono text-pink-300">{Math.min(adsWatched, 3)}/3</span></p>
-                    <p className="text-xs font-bold text-pink-400 mt-1 bg-pink-400/10 inline-flex items-center px-2 py-0.5 rounded-md drop-shadow-sm">+1000 <XpIcon className="w-4 h-4 ml-1.5" /></p>
+                    <p className="text-xs font-bold text-pink-400 mt-1 bg-pink-400/10 inline-flex items-center px-2 py-0.5 rounded-md drop-shadow-sm">+100 <XpIcon className="w-4 h-4 ml-1.5" /></p>
                   </div>
                 </div>
                 {adsWatched > 3 && lastAdDate === new Date().toDateString() ? (
@@ -851,19 +1043,31 @@ export default function App() {
               </h3>
               
               <div className="space-y-3">
-                {adTasks.map((task, idx) => {
+                {adTasks.map((task: any, idx) => {
                   const isDone = completedTasks.includes(task.id);
+                  const waitTime = pendingTasks[task.id];
+                  const canClaim = waitTime !== undefined && waitTime <= 0;
+                  const isPending = waitTime !== undefined && waitTime > 0;
+
+                  const getIconColor = (type?: string) => {
+                    if (type === 'instagram') return 'bg-gradient-to-tr from-purple-600 via-pink-600 to-orange-500';
+                    if (type === 'youtube') return 'bg-red-600';
+                    if (type === 'tiktok') return 'bg-slate-900 border border-slate-700';
+                    if (type === 'telegram') return 'bg-sky-500';
+                    return 'bg-gradient-to-br from-blue-500 to-cyan-500';
+                  };
+
                   return (
                     <motion.div 
                       key={task.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.1 }}
+                      transition={{ delay: idx * 0.05 }}
                       className={`bg-slate-800 rounded-[24px] p-2 border-b-[4px] border-slate-900 shadow-md flex items-center justify-between ${isDone ? 'opacity-60' : ''}`}
                     >
                       <div className="flex items-center flex-1 overflow-hidden">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mr-3 rtl:ml-3 rtl:mr-0 shadow-inner shrink-0 ${isDone ? 'bg-slate-700' : 'bg-gradient-to-br from-blue-500 to-cyan-500'}`}>
-                          {isDone ? <Check className="text-emerald-400 w-5 h-5" /> : <ExternalLink className="text-white w-5 h-5" />}
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mr-3 rtl:ml-3 rtl:mr-0 shadow-inner shrink-0 ${isDone ? 'bg-slate-700' : getIconColor(task.type)}`}>
+                          {isDone ? <Check className="text-emerald-400 w-5 h-5" /> : <SocialIcon type={task.type} className="text-white w-5 h-5" />}
                         </div>
                         <div className="flex-1 min-w-0 pr-2 rtl:pl-2 rtl:pr-0">
                           <p className={`font-extrabold text-sm truncate ${isDone ? 'text-slate-400 line-through' : 'text-slate-100'}`}>{task.title}</p>
@@ -873,15 +1077,26 @@ export default function App() {
                         </div>
                       </div>
                       <button 
-                        onClick={() => !isDone && completeTask(task.id, task.reward, task.link)}
-                        disabled={isDone}
-                        className={`font-extrabold rounded-xl border-b-[3px] transition-all text-sm shrink-0 px-5 py-2.5 ${
+                        onClick={() => {
+                          if (isDone) return;
+                          if (canClaim) {
+                            completeTask(task.id, task.reward);
+                          } else if (!isPending) {
+                            startTask(task.id, task.link);
+                          }
+                        }}
+                        disabled={isDone || isPending}
+                        className={`font-extrabold rounded-xl border-b-[3px] transition-all text-sm shrink-0 px-5 py-2.5 min-w-[85px] text-center ${
                           isDone 
                           ? 'bg-slate-700 text-slate-500 border-slate-800 cursor-not-allowed' 
+                          : isPending
+                          ? 'bg-slate-800 text-slate-400 border-slate-900 cursor-not-allowed border-b-[1px]'
+                          : canClaim
+                          ? 'bg-emerald-500 text-white border-emerald-700 animate-pulse active:border-b-0 active:translate-y-[3px]'
                           : 'bg-cyan-500 text-white border-cyan-700 active:border-b-0 active:translate-y-[3px]'
                         }`}
                       >
-                        {isDone ? t('taskDone') : t('claim')}
+                        {isDone ? t('taskDone') : isPending ? `${waitTime}s` : canClaim ? t('claim') : t('watch')}
                       </button>
                     </motion.div>
                   )
@@ -1104,103 +1319,124 @@ export default function App() {
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"
           >
             <motion.div 
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="bg-slate-800 border-2 border-slate-700/50 rounded-[32px] w-full max-w-sm p-6 shadow-2xl relative overflow-hidden"
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="bg-slate-800/95 backdrop-blur-xl border border-slate-700/50 rounded-[30px] w-full max-w-[340px] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden"
             >
+              {/* Decorative elements */}
+              <div className="absolute top-[-10%] right-[-10%] w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl"></div>
+              <div className="absolute bottom-[-10%] left-[-10%] w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl"></div>
+
               <button 
                 onClick={() => setIsWalletModalOpen(false)}
-                className="absolute top-4 right-4 rtl:left-4 rtl:right-auto text-slate-400 hover:text-white bg-slate-700/50 hover:bg-slate-700 p-1.5 rounded-full transition-colors z-10"
+                className="absolute top-4 right-4 rtl:left-4 rtl:right-auto text-slate-400 hover:text-white bg-slate-700/30 hover:bg-slate-700 p-1.5 rounded-full transition-all z-20"
               >
                 <X className="w-5 h-5" />
               </button>
               
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-[24px] flex items-center justify-center mx-auto mb-3 shadow-[0_0_20px_rgba(52,211,153,0.3)] border border-emerald-300/20">
+              <div className="text-center mb-6 relative z-10">
+                <div className="w-16 h-16 bg-gradient-to-tr from-emerald-500 to-cyan-400 rounded-[22px] flex items-center justify-center mx-auto mb-3 shadow-[0_10px_20px_rgba(16,185,129,0.2)] transform rotate-2 hover:rotate-0 transition-transform duration-300 border border-white/20">
                   <Wallet className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-xl font-extrabold text-white mb-1">{t('internalWallet')}</h3>
-                <div className="flex items-center justify-center space-x-4 rtl:space-x-reverse text-sm font-bold bg-slate-900/50 rounded-xl py-2 px-4 shadow-inner w-max mx-auto border border-slate-700/50">
-                  <p className="text-slate-300 flex items-center">
-                    <span className="text-amber-400 mr-1.5 rtl:ml-1.5 rtl:mr-0">{points.toLocaleString()}</span> <span className="text-[10px] uppercase text-slate-500">XP</span>
-                  </p>
-                  <div className="w-px h-4 bg-slate-700"></div>
-                  <p className="text-emerald-400 flex items-center">
-                    <span className="mr-1.5 rtl:ml-1.5 rtl:mr-0">{tonBalance}</span> <TonImage className="w-3.5 h-3.5" />
-                  </p>
+                <h3 className="text-xl font-black text-white tracking-tight mb-1">{t('internalWallet')}</h3>
+                <div className="flex items-center justify-center space-x-3 rtl:space-x-reverse bg-slate-950/40 rounded-2xl py-2 px-4 shadow-inner border border-white/5 backdrop-blur-md">
+                  <div className="flex flex-col items-center">
+                    <span className="text-amber-400 text-base font-black leading-none">{points.toLocaleString()}</span>
+                    <span className="text-[8px] uppercase font-bold text-slate-500 tracking-tighter mt-1">XP Points</span>
+                  </div>
+                  <div className="w-px h-5 bg-slate-800"></div>
+                  <div className="flex flex-col items-center">
+                    <span className="text-emerald-400 text-base font-black leading-none flex items-center">{tonBalance} <TonImage className="w-3.5 h-3.5 ml-1" /></span>
+                    <span className="text-[8px] uppercase font-bold text-slate-500 tracking-tighter mt-1">TON Coins</span>
+                  </div>
                 </div>
               </div>
 
               {/* TABS */}
-              <div className="flex bg-slate-900/80 p-1.5 rounded-2xl mb-6 shadow-inner border border-slate-800">
+              <div className="flex bg-slate-950/40 p-1 rounded-xl mb-6 border border-white/5 relative z-10">
                 <button 
                   onClick={() => setWalletTab('convert')}
-                  className={`flex-1 py-2 text-sm font-extrabold rounded-xl transition-all ${walletTab === 'convert' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                  className={`flex-1 py-2 text-[11px] font-black rounded-lg transition-all duration-200 ${walletTab === 'convert' ? 'bg-gradient-to-r from-slate-700 to-slate-800 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
                 >
-                  {t('convert')}
+                   {t('convert')}
                 </button>
                 <button 
                   onClick={() => setWalletTab('withdraw')}
-                  className={`flex-1 py-2 text-sm font-extrabold rounded-xl transition-all ${walletTab === 'withdraw' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                  className={`flex-1 py-2 text-[11px] font-black rounded-lg transition-all duration-200 ${walletTab === 'withdraw' ? 'bg-gradient-to-r from-slate-700 to-slate-800 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
                 >
                   {t('withdraw')}
                 </button>
               </div>
 
               {walletTab === 'convert' && (
-                <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
-                  <div className="bg-slate-900/50 border border-slate-700/50 rounded-2xl p-4 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-emerald-400 opacity-50"></div>
-                    <div className="flex justify-between items-center mb-4 relative z-10">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">From</span>
-                        <span className="text-xl font-black text-amber-400 font-mono">10,000 XP</span>
+                <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="space-y-4 relative z-10">
+                  <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/40 border border-white/5 rounded-2xl p-4 relative group overflow-hidden">
+                    <div className="flex justify-between items-center relative z-10">
+                      <div className="text-center flex-1">
+                        <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1.5 block">Exchange</span>
+                        <div className="bg-amber-500/10 text-amber-500 rounded-lg py-1.5 px-2.5 inline-block border border-amber-500/20 font-mono font-bold text-xs">
+                          10k XP
+                        </div>
                       </div>
-                      <ArrowRightLeft className="w-5 h-5 text-slate-500 mx-2" />
-                      <div className="flex flex-col items-end">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">To</span>
-                        <span className="text-xl font-black text-emerald-400 font-mono flex items-center">1 <TonImage className="w-4 h-4 ml-1.5 rtl:mr-1.5 rtl:ml-0" /></span>
+                      <div className="p-1.5 bg-slate-700/50 rounded-full">
+                        <ArrowRightLeft className="w-4 h-4 text-slate-400" />
+                      </div>
+                      <div className="text-center flex-1">
+                        <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1.5 block">Receive</span>
+                        <div className="flex items-center justify-center">
+                          <div className="bg-emerald-500/10 text-emerald-500 rounded-lg py-1.5 px-2.5 border border-emerald-500/20 font-mono font-bold text-xs flex items-center">
+                            1 <TonImage className="w-3.5 h-3.5 ml-1" />
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <p className="text-[11px] text-center text-slate-400 font-medium">
-                      {t('exchangeInfo')}
-                    </p>
                   </div>
                   <button 
                     onClick={handleExchangeXP}
                     disabled={points < 10000}
-                    className={`w-full font-extrabold py-3.5 rounded-2xl border-b-[4px] shadow-lg active:border-b-0 active:translate-y-[4px] transition-all flex items-center justify-center ${points >= 10000 ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-orange-700' : 'bg-slate-700 text-slate-500 border-slate-800 cursor-not-allowed'}`}
+                    className={`w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-lg active:scale-95 disabled:grayscale disabled:opacity-50 ${points >= 10000 ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:shadow-orange-500/20' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}
                   >
-                    <ArrowRightLeft className="w-4 h-4 mr-2" /> {t('convert')}
+                    {t('convert')} Now
                   </button>
+                  <p className="text-[9px] text-center text-slate-500 font-bold uppercase tracking-widest bg-slate-900/30 py-1.5 rounded-lg border border-white/5">
+                    ⚡️ Instant Balance Transformation
+                  </p>
                 </motion.div>
               )}
 
               {walletTab === 'withdraw' && (
-                <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
-                  <div className="text-center">
-                    <p className="text-xs text-emerald-400 font-bold bg-emerald-400/10 inline-flex items-center px-2.5 py-1 rounded-lg border border-emerald-500/20 shadow-sm">
-                      {t('withdrawMin')} <TonImage className="w-3.5 h-3.5 ml-1.5 rtl:mr-1.5 rtl:ml-0" />
-                    </p>
+                <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="space-y-4 relative z-10">
+                  <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-2xl py-3 px-4 flex items-center justify-center">
+                    <ShieldCheck className="w-4 h-4 text-emerald-500 mr-2" />
+                    <span className="text-[11px] font-black text-emerald-400 uppercase tracking-wide">
+                      Withdrawal Secure • {t('withdrawMin')}
+                    </span>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t('walletAddress')}</label>
-                    <input 
-                      type="text" 
-                      value={withdrawAddress}
-                      onChange={(e) => setWithdrawAddress(e.target.value)}
-                      placeholder="EQ..."
-                      className="w-full bg-slate-900 border-2 border-slate-700 rounded-2xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 transition-colors placeholder:text-slate-600"
-                    />
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Your Recipient address</label>
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        value={withdrawAddress}
+                        onChange={(e) => setWithdrawAddress(e.target.value)}
+                        placeholder="Ex: UQCT...N1Ad3"
+                        className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-4 py-3.5 text-xs font-bold text-white focus:outline-none focus:border-emerald-500 transition-all placeholder:text-slate-700"
+                      />
+                    </div>
                   </div>
                   <button 
                     onClick={handleWithdraw}
                     disabled={tonBalance < 4 || !withdrawAddress}
-                    className={`w-full font-extrabold py-3.5 rounded-2xl border-b-[4px] shadow-lg active:border-b-0 active:translate-y-[4px] transition-all flex items-center justify-center ${tonBalance >= 4 && withdrawAddress ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-teal-700' : 'bg-slate-700 text-slate-500 border-slate-800 cursor-not-allowed'}`}
+                    className={`w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-lg active:scale-95 disabled:grayscale disabled:opacity-50 ${tonBalance >= 4 && withdrawAddress ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:shadow-emerald-500/20' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}
                   >
-                    <Send className="w-4 h-4 mr-2" /> {t('withdraw')}
+                    Confirm Withdrawal
                   </button>
+                  <div className="flex items-center justify-center space-x-2 text-[9px] text-slate-500 font-bold uppercase tracking-widest pt-2">
+                    <Clock className="w-3 h-3" />
+                    <span>Processing: 24h MAX</span>
+                  </div>
                 </motion.div>
               )}
             </motion.div>
@@ -1286,6 +1522,126 @@ export default function App() {
                 ))
               )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Lucky Wheel Modal */}
+      <AnimatePresence>
+        {isWheelOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-slate-900 border-2 border-slate-700/50 rounded-[40px] w-full max-w-sm p-6 shadow-2xl relative overflow-hidden flex flex-col items-center"
+            >
+              <div className="absolute top-[-10%] right-[-10%] w-40 h-40 bg-purple-500/10 rounded-full blur-3xl"></div>
+              <div className="absolute bottom-[-10%] left-[-10%] w-40 h-40 bg-pink-500/10 rounded-full blur-3xl"></div>
+
+              <button 
+                onClick={() => setIsWheelOpen(false)}
+                className="absolute top-5 right-5 rtl:left-5 rtl:right-auto text-slate-400 hover:text-white bg-slate-800 p-2 rounded-full transition-colors z-20"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center mb-6 z-10 w-full pt-4">
+                <h3 className="text-2xl font-black text-white mb-1 flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 mr-3 text-purple-400" /> {t('luckyWheel')}
+                </h3>
+                <div className="bg-slate-800/60 rounded-xl py-2 px-4 shadow-inner border border-slate-700/50 inline-flex items-center text-xs font-black uppercase tracking-wider text-slate-400">
+                  <RefreshCw className={`w-3.5 h-3.5 mr-2 text-cyan-400 ${isSpinning ? 'animate-spin' : ''}`} />
+                  {lastWheelDate !== new Date().toDateString() ? t('freeSpin') : `${t('adSpin')} (${adSpinsCount}/3)`}
+                </div>
+              </div>
+
+              {/* The Wheel Visual */}
+              <div className="relative w-64 h-64 mb-8 flex items-center justify-center shrink-0">
+                {/* Pointer */}
+                <div className="absolute top-[-12px] left-1/2 -translate-x-1/2 z-20 w-8 h-8 flex items-center justify-center">
+                  <div className="w-4 h-6 bg-white rounded-b-full shadow-lg border-x-2 border-slate-900 z-10"></div>
+                  <div className="absolute top-0 w-6 h-6 bg-indigo-500 rounded-full blur-md opacity-50"></div>
+                </div>
+
+                {/* Spinning part */}
+                <motion.div 
+                  className="w-full h-full rounded-full border-[6px] border-slate-800 shadow-[0_0_40px_rgba(0,0,0,0.5)] relative overflow-hidden bg-slate-800"
+                  animate={{ rotate: rotation }}
+                  transition={{ duration: 4, ease: [0.15, 0, 0.15, 1] }}
+                  style={{ transformOrigin: 'center' }}
+                >
+                  <div className="absolute inset-0 rounded-full border-[10px] border-slate-900/50 z-10 pointer-events-none"></div>
+                  
+                  {/* Slices using SVG for better control */}
+                  <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-22.5">
+                    {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
+                      const colors = [
+                        '#818cf8', '#f472b6', '#34d399', '#fbbf24', 
+                        '#a78bfa', '#ec4899', '#2dd4bf', '#f59e0b'
+                      ];
+                      const labels = ['5 XP', '10 XP', '15 XP', '0.005 T', '50 XP', '1k XP', '1 TON', '15 T'];
+                      const angle = i * 45;
+                      const rad = (angle * Math.PI) / 180;
+                      const x1 = 50 + 50 * Math.cos(rad);
+                      const y1 = 50 + 50 * Math.sin(rad);
+                      const nextRad = ((angle + 45) * Math.PI) / 180;
+                      const x2 = 50 + 50 * Math.cos(nextRad);
+                      const y2 = 50 + 50 * Math.sin(nextRad);
+                      
+                      return (
+                        <g key={i}>
+                          <path 
+                            d={`M 50 50 L ${x1} ${y1} A 50 50 0 0 1 ${x2} ${y2} Z`}
+                            fill={colors[i]}
+                            className="opacity-90 active:opacity-100 transition-opacity stroke-slate-900 stroke-[0.5]"
+                          />
+                          <text 
+                            x="50" 
+                            y="20" 
+                            transform={`rotate(${angle + 22.5}, 50, 50)`}
+                            textAnchor="middle" 
+                            fill="white" 
+                            className="text-[5px] font-black pointer-events-none drop-shadow-md"
+                          >
+                            {labels[i]}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </svg>
+                </motion.div>
+
+                {/* Center Hub */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 bg-slate-900 rounded-full z-10 border-4 border-slate-800 flex items-center justify-center shadow-lg">
+                   <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 animate-pulse"></div>
+                </div>
+              </div>
+
+              <div className="w-full space-y-4 z-10">
+                <button 
+                  onClick={handleStartSpin}
+                  disabled={isSpinning || (lastWheelDate === new Date().toDateString() && adSpinsCount === 0)}
+                  className={`w-full py-4 rounded-2xl font-black text-lg uppercase tracking-widest transition-all shadow-xl active:scale-95 disabled:grayscale disabled:opacity-50 ${!isSpinning && (lastWheelDate !== new Date().toDateString() || adSpinsCount > 0) ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-500/20' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
+                >
+                  {isSpinning ? 'Good Luck!' : (lastWheelDate !== new Date().toDateString() ? t('freeSpin') : t('spin'))}
+                </button>
+
+                {lastWheelDate === new Date().toDateString() && adSpinsCount < 3 && !isSpinning && (
+                  <button 
+                    onClick={triggerWheelAd}
+                    className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-black text-xs uppercase tracking-widest rounded-2xl border border-slate-700/50 transition-all flex items-center justify-center"
+                  >
+                    <Megaphone className="w-4 h-4 mr-2" /> Get +1 Ad Spin ({adSpinsCount}/3)
+                  </button>
+                )}
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
