@@ -180,7 +180,7 @@ export const AppMiniGame = ({ onClose, onEarn }: { onClose: () => void, onEarn: 
           setIsAdLoading(true);
           try {
               // @ts-ignore
-              const AdController = window.Adsgram.init({ blockId: "int-27689" });
+              const AdController = window.Adsgram.init({ blockId: "int-28074" });
               await AdController.show();
               setIsAdLoading(false);
               action();
@@ -249,7 +249,7 @@ export const AppMiniGame = ({ onClose, onEarn }: { onClose: () => void, onEarn: 
        initial={{ opacity: 0, scale: 0.95 }}
        animate={{ opacity: 1, scale: 1 }}
        exit={{ opacity: 0, scale: 0.95 }}
-       className="fixed inset-0 z-[100] bg-slate-900 flex flex-col"
+       className="fixed inset-0 z-[100] bg-slate-900 flex flex-col w-full max-w-[100vw] overflow-x-hidden"
     >
       <div className="flex justify-between items-center px-4 py-3 bg-slate-800 shadow-xl z-50 rounded-b-2xl">
          <h2 className="text-lg font-bold text-white flex items-center">
