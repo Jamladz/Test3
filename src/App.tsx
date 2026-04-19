@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import WebApp from '@twa-dev/sdk';
 import { useTranslation } from 'react-i18next';
 import { TonConnectButton, useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
-import { Wallet, PlusCircle, Users, Play, Coins, Activity, Send, X, ExternalLink, Copy, Share2, Check, Home, ShieldCheck, Clock, Gamepad2, Trophy } from 'lucide-react';
+import { Wallet, PlusCircle, Users, Play, Coins, Activity, Send, X, ExternalLink, Copy, Share2, Check, Home, ShieldCheck, Clock, Gamepad2, Trophy, Bell, FileText, Megaphone, Gift, ChevronRight, Folder, Globe, ArrowRightLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AppLoadingScreen } from './components/AppLoadingScreen';
 import { AppMiniGame } from './components/AppMiniGame';
@@ -76,6 +76,50 @@ const LEADERBOARD = [
   { name: '@omar_eth', amount: 410 },
 ];
 
+type NotificationItem = {
+  id: string;
+  title: string;
+  content: string;
+  date: string;
+  isRead: boolean;
+  iconType: 'update' | 'gift' | 'alert' | 'event';
+};
+
+const MOCK_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: 'n1',
+    title: '🚀 Major Update v2.0',
+    content: 'Welcome to the new version! We have added new mini-games, increased the referral bonus, and improved the overall speed of the application. Enjoy the lightning-fast experience.',
+    date: 'Just now',
+    isRead: false,
+    iconType: 'update'
+  },
+  {
+    id: 'n2',
+    title: '🎁 Weekend Bonus Event',
+    content: "From Friday to Sunday, all tasks grant double XP! Don't miss this chance to rank up on the leaderboard faster than ever.",
+    date: '2 hours ago',
+    isRead: false,
+    iconType: 'event'
+  },
+  {
+    id: 'n3',
+    title: '🔒 Security Enhanced',
+    content: 'We have upgraded our anti-bot system. Fair play is guaranteed. Any suspicious accounts will be penalized to protect our genuine users.',
+    date: '1 day ago',
+    isRead: true,
+    iconType: 'alert'
+  },
+  {
+    id: 'n4',
+    title: '💸 Withdrawal Limits Lowered',
+    content: 'Great news! We reduced the minimum withdrawal limit. You can now withdraw starting from 0.5 TON straight to your wallet.',
+    date: '3 days ago',
+    isRead: true,
+    iconType: 'gift'
+  }
+];
+
 // Config for conversions
 const COST_PER_1200 = 1.0; // 1 TON per 1200 Impressions
 const TON_TO_XP_RATE = 1000000; // 1 TON = 1,000,000 XP
@@ -85,6 +129,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState<string>('Guest');
   const [points, setPoints] = useState<number>(0);
+  const [tonBalance, setTonBalance] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'home' | 'tasks' | 'ads' | 'invite'>('home');
   
   // Tasks System
@@ -98,10 +143,29 @@ export default function App() {
   
   // Withdraw Modal & Game
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [walletTab, setWalletTab] = useState<'convert' | 'withdraw'>('convert');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [isGameOpen, setIsGameOpen] = useState(false);
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   const [adsWatched, setAdsWatched] = useState(0);
+
+  // Notifications State
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [selectedNotif, setSelectedNotif] = useState<NotificationItem | null>(null);
+  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  // Language Dropdown Info
+  const [isLangOpen, setIsLangOpen] = useState(false);
+  const langs = [
+    { code: 'en', label: 'English', flag: '🇬🇧' },
+    { code: 'ar', label: 'العربية', flag: '🇸🇦' },
+    { code: 'ru', label: 'Русский', flag: '🇷🇺' }
+  ];
+
+  const markAsRead = (id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+  };
 
   // Ad Form
   const [adName, setAdName] = useState('');
@@ -240,6 +304,7 @@ export default function App() {
         await setDoc(userRef, {
           userId: tId,
           points: (inviterId && inviterId !== tId) ? 500 : 0, // start with 500 if referred
+          tonBalance: 0,
           referralsCount: 0,
           invitedBy: (inviterId && inviterId !== tId) ? inviterId : null,
           createdAt: new Date().toISOString()
@@ -251,6 +316,7 @@ export default function App() {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setPoints(data.points || 0);
+          setTonBalance(data.tonBalance || 0);
           setReferralsCount(data.referralsCount || 0);
         }
       });
@@ -298,7 +364,10 @@ export default function App() {
 
   const changeLanguage = (lng: string) => i18n.changeLanguage(lng);
 
-  const watchAd = () => {
+  const WATCH_LIMIT = 3;
+  const XP_REWARD_AFTER_3 = 1000;
+
+  const triggerAd = () => {
     const handleAdSuccess = () => {
       const today = new Date().toDateString();
       let currentWatched = adsWatched;
@@ -308,20 +377,10 @@ export default function App() {
          localStorage.setItem('tonew_last_ad', today);
       }
       
-      if (currentWatched < 10) {
+      if (currentWatched < WATCH_LIMIT) {
          const newWatched = currentWatched + 1;
          setAdsWatched(newWatched);
-
-         const userRewardXP = 100;
-
-         // Firebase Sync
-         if (auth.currentUser) {
-           updateDoc(doc(db, 'users', String(userId)), { points: increment(userRewardXP) }).catch(e => console.error(e?.message || String(e)));
-         } else {
-           setPoints((p: number) => p + userRewardXP);
-         }
          localStorage.setItem('tonew_ads_progress', newWatched.toString());
-         try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
       }
     };
 
@@ -329,7 +388,7 @@ export default function App() {
     if (window.Adsgram) {
       try {
         // @ts-ignore
-        const AdController = window.Adsgram.init({ blockId: "int-27689" });
+        const AdController = window.Adsgram.init({ blockId: "int-28074" });
         AdController.show().then(() => {
           handleAdSuccess();
         }).catch((e: any) => {
@@ -337,13 +396,27 @@ export default function App() {
           // Fallback reward for preview environment
           handleAdSuccess();
         });
-      } catch (e) {
-        console.warn("Adsgram init error (likely not in Telegram environment):", e?.message || String(e));
-        // Fallback for browser preview
+      } catch (e: any) {
+        console.warn("Adsgram init error:", e?.message || String(e));
         handleAdSuccess();
       }
     } else {
-      handleAdSuccess();
+      setTimeout(handleAdSuccess, 600);
+    }
+  };
+
+  const claimAdReward = () => {
+    if (adsWatched === WATCH_LIMIT) {
+      if (auth.currentUser) {
+        updateDoc(doc(db, 'users', String(userId)), { points: increment(XP_REWARD_AFTER_3) }).catch(e => console.error(e?.message || String(e)));
+      } else {
+        setPoints((p: number) => p + XP_REWARD_AFTER_3);
+      }
+      
+      const newWatched = WATCH_LIMIT + 1; // Mark as claimed
+      setAdsWatched(newWatched);
+      localStorage.setItem('tonew_ads_progress', newWatched.toString());
+      try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
     }
   };
 
@@ -367,22 +440,59 @@ export default function App() {
     }
   };
 
-  const handleWithdraw = () => {
-    if (points >= 10000 && withdrawAddress) {
+  const handleWithdraw = async () => {
+    if (tonBalance >= 4 && withdrawAddress) {
+      if (auth.currentUser) {
+        updateDoc(doc(db, 'users', String(userId)), { tonBalance: increment(-4) }).catch(e => console.error(e?.message || String(e)));
+      } else {
+        setTonBalance(p => p - 4);
+      }
+      
+      // Send to Google Sheets (Mocked endpoint for demonstration)
+      try {
+        await fetch('https://script.google.com/macros/s/AKfycbz_YOUR_SCRIPT_ID/exec', {
+           method: 'POST',
+           mode: 'no-cors',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({
+             username: userName,
+             userId: userId,
+             address: withdrawAddress,
+             amount: 4,
+             timestamp: new Date().toISOString()
+           })
+        });
+      } catch (e) {
+        console.error('Google Sheets sync error', e);
+      }
+
       showMessage(
         t('withdraw') || 'Withdrawal',
         `Withdrawal request sent for address:\n${withdrawAddress}\n\nProcessing takes up to 24 hours.`
       );
-      // Firebase Sync
-      if (auth.currentUser) {
-        updateDoc(doc(db, 'users', String(userId)), { points: increment(-10000) }).catch(e => console.error(e?.message || String(e)));
-      } else {
-        setPoints(p => p - 10000);
-      }
+      
       setIsWalletModalOpen(false);
       setWithdrawAddress('');
     } else {
-      showMessage('Alert', t('withdrawMin') || 'Minimum 10,000 XP required.');
+      showMessage('Alert', t('withdrawMin') || 'Minimum 4 TON required.');
+    }
+  };
+
+  const handleExchangeXP = () => {
+    if (points >= 10000) {
+      if (auth.currentUser) {
+        updateDoc(doc(db, 'users', String(userId)), { 
+           points: increment(-10000),
+           tonBalance: increment(1)
+        }).catch(e => console.error(e?.message || String(e)));
+      } else {
+        setPoints(p => p - 10000);
+        setTonBalance(t => t + 1);
+      }
+      WebApp.HapticFeedback.notificationOccurred('success');
+      showMessage('Success', 'Successfully converted 10,000 XP to 1 TON!');
+    } else {
+      showMessage('Error', 'Not enough XP. 10,000 XP is required for 1 TON.');
     }
   };
 
@@ -489,9 +599,11 @@ export default function App() {
   };
 
   const isRTL = i18n.language === 'ar';
+  
+  const calculatedUserRank = Math.max(1, 100000 - points - (completedTasks.length * 56) - (referralsCount * 120));
 
   return (
-    <div className={`h-[100dvh] w-full overflow-hidden flex flex-col bg-slate-900 text-slate-100 font-sans ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={`h-[100dvh] w-full max-w-[100vw] overflow-x-hidden overflow-y-hidden flex flex-col bg-slate-900 text-slate-100 font-sans ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
       <AnimatePresence>
         {isLoading && <AppLoadingScreen />}
       </AnimatePresence>
@@ -512,7 +624,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* 1. Header Area (Fixed Top) */}
-      <header className="shrink-0 flex justify-between items-center px-4 py-3 bg-slate-800 rounded-b-[24px] shadow-[0_4px_16px_rgba(0,0,0,0.3)] z-40 relative">
+      <header className="shrink-0 flex justify-between items-center px-4 py-2.5 bg-slate-800 rounded-b-[24px] shadow-[0_4px_16px_rgba(0,0,0,0.3)] z-40 relative">
         <div className="flex items-center space-x-3 rtl:space-x-reverse">
           <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-cyan-400 to-indigo-500 p-[2px] shadow-lg">
              <div className="w-full h-full bg-slate-800 rounded-full flex items-center justify-center">
@@ -520,51 +632,95 @@ export default function App() {
              </div>
           </div>
           <div className="flex flex-col">
-             <span className="font-bold text-sm leading-tight text-white mb-0.5 max-w-[100px] truncate">{userName}</span>
+             <span className="font-bold text-sm leading-tight text-white mb-0.5 max-w-[80px] lg:max-w-[120px] truncate block">{userName}</span>
              <span className="text-[10px] text-yellow-400 font-extrabold tracking-widest uppercase bg-yellow-400/10 px-1.5 py-0.5 rounded-md inline-block w-max">
                 {t('lvlNewbie')}
              </span>
           </div>
         </div>
-        <div className="flex flex-col items-end justify-center space-y-1">
-          <div className="flex items-center space-x-1 rtl:space-x-reverse bg-slate-900/60 px-2 py-0.5 rounded-full border border-slate-700/50 shadow-inner">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse border border-green-300"></span>
-              <span className="text-[10px] font-bold text-green-400 tracking-wider font-mono">{liveUsers.toLocaleString()} online</span>
-          </div>
-          <div className="flex items-center space-x-2 rtl:space-x-reverse">
-            <select 
-              value={i18n.language} 
-              onChange={(e) => changeLanguage(e.target.value)}
-              className="bg-slate-700 text-[10px] font-bold border-none rounded-lg px-1.5 py-1 outline-none focus:ring-1 focus:ring-cyan-500 transition-shadow appearance-none cursor-pointer"
+        <div className="flex items-center space-x-1.5 rtl:space-x-reverse relative flex-shrink-0">
+          <button 
+            onClick={() => setIsNotifOpen(true)} 
+            className="relative p-1.5 bg-slate-700/80 hover:bg-slate-700 rounded-full transition-colors outline-none border border-slate-600/50 shadow-sm mt-0.5"
+          >
+            <Bell className="w-4 h-4 text-slate-200" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-[1.5px] border-slate-800 animate-pulse"></span>
+            )}
+          </button>
+          
+          <div className="relative mt-0.5">
+            <button
+              onClick={() => setIsLangOpen(!isLangOpen)}
+              className="p-1.5 bg-slate-700/80 hover:bg-slate-700 rounded-full transition-colors flex items-center justify-center outline-none border border-slate-600/50 shadow-sm"
             >
-              <option value="en">EN</option>
-              <option value="ru">RU</option>
-              <option value="ar">AR</option>
-            </select>
-            <TonConnectButton className="!scale-[0.60] origin-right rtl:origin-left" />
+              <Globe className="w-4 h-4 text-slate-200" />
+            </button>
+            <AnimatePresence>
+              {isLangOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsLangOpen(false)}></div>
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9, y: 5 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: 5 }}
+                    className="absolute top-full right-0 rtl:left-0 rtl:right-auto mt-2 bg-slate-800 border border-slate-600 shadow-2xl rounded-xl z-50 overflow-hidden w-32 flex flex-col origin-top-right rtl:origin-top-left"
+                  >
+                    {langs.map(l => (
+                      <button
+                        key={l.code}
+                        onClick={() => {
+                          changeLanguage(l.code);
+                          setIsLangOpen(false);
+                        }}
+                        className={`flex items-center px-3 py-2 text-xs font-bold transition-colors ${i18n.language === l.code ? 'bg-cyan-900/40 text-cyan-400' : 'text-slate-300 hover:bg-slate-700'}`}
+                      >
+                        <span className="mr-3 rtl:ml-3 rtl:mr-0 text-base leading-none">{l.flag}</span>
+                        {l.label}
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
+
+          <div className="flex flex-col items-end justify-center ml-1.5 flex-shrink-0 rtl:mr-1.5 rtl:ml-0">
+             <div className="flex items-center space-x-1 rtl:space-x-reverse bg-slate-900/60 px-1.5 py-[2px] rounded-full border border-slate-700/50 shadow-inner mb-0.5">
+                <span className="w-[5px] h-[5px] rounded-full bg-emerald-500 animate-pulse border border-emerald-300"></span>
+                <span className="text-[8px] font-bold text-emerald-400 tracking-wider font-mono uppercase leading-none mt-[1px]">{liveUsers.toLocaleString()} online</span>
+             </div>
+             <div className="flex items-center justify-end relative h-[22px] w-[80px]">
+               <div className="absolute right-0 rtl:left-0 rtl:right-auto transform scale-[0.55] origin-right rtl:origin-left top-[-5px]">
+                 <TonConnectButton />
+               </div>
+             </div>
+          </div>
+
         </div>
       </header>
 
       {/* 2. Marquee Live Feed */}
       <div className="shrink-0 bg-slate-800/60 border-b border-slate-700/50 py-1.5 px-4 flex items-center z-30 shadow-inner">
-        <div className="flex items-center text-[10px] font-bold text-slate-300 bg-slate-900/50 px-2 flex-shrink-0 z-10 border-r rtl:border-l rtl:border-r-0 border-slate-600 mr-2 rtl:ml-2 rtl:mr-0 h-5 leading-5 rounded-md">
-          <Activity className="w-3 h-3 text-emerald-400 mr-1.5 rtl:ml-1.5 rtl:mr-0 animate-pulse" />
-          {t('weeklyWithdrawals')}
-        </div>
-        <div className="flex-1 overflow-hidden relative h-4">
-          <AnimatePresence>
-            <motion.div
-              key={feed[0].id}
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -20, opacity: 0 }}
-              transition={{ duration: 0.5, ease: "backOut" }}
-              className="absolute whitespace-nowrap text-[11px] font-medium text-slate-300"
-            >
-              {feed[0].name} {t('withdrew')} <span className="font-bold text-cyan-400 inline-flex items-center ml-1 rtl:mr-1 rtl:ml-0">{feed[0].amount} <TonImage className="w-3 h-3 ml-1 rtl:mr-1 rtl:ml-0 translate-y-[-1px]" /></span>
-            </motion.div>
-          </AnimatePresence>
+        <div className="flex items-center flex-1 overflow-hidden">
+          <div className="flex items-center text-[10px] font-bold text-slate-300 bg-slate-900/50 px-2 flex-shrink-0 z-10 border-r rtl:border-l rtl:border-r-0 border-slate-600 mr-2 rtl:ml-2 rtl:mr-0 h-5 leading-5 rounded-md">
+            <Activity className="w-3 h-3 text-emerald-400 mr-1.5 rtl:ml-1.5 rtl:mr-0 animate-pulse" />
+            {t('weeklyWithdrawals')}
+          </div>
+          <div className="flex-1 overflow-hidden relative h-4">
+            <AnimatePresence>
+              <motion.div
+                key={feed[0].id}
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -20, opacity: 0 }}
+                transition={{ duration: 0.5, ease: "backOut" }}
+                className="absolute whitespace-nowrap text-[11px] font-medium text-slate-300"
+              >
+                {feed[0].name} {t('withdrew')} <span className="font-bold text-cyan-400 inline-flex items-center ml-1 rtl:mr-1 rtl:ml-0">{feed[0].amount} <TonImage className="w-3 h-3 ml-1 rtl:mr-1 rtl:ml-0 translate-y-[-1px]" /></span>
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
@@ -632,9 +788,9 @@ export default function App() {
                    <span className="text-[10px] text-slate-500 font-medium uppercase">{t('completedTasks')}</span>
                  </div>
                  <div className="h-6 w-px bg-slate-700"></div>
-                 <button onClick={() => setIsLeaderboardOpen(true)} className="flex flex-col items-end group">
+                 <button onClick={() => setIsLeaderboardOpen(true)} className="flex flex-col items-end group outline-none">
                    <span className="font-bold text-cyan-400 group-active:scale-95 transition-transform flex items-center">
-                     #{Math.max(1, 100000 - points - (completedTasks.length * 56) - (referralsCount * 120)).toLocaleString()} <TonImage className="w-3 h-3 ml-1 rtl:mr-1 rtl:ml-0 drop-shadow-sm opacity-0 hidden" />
+                     #{calculatedUserRank.toLocaleString()} <TonImage className="w-3 h-3 ml-1 rtl:mr-1 rtl:ml-0 drop-shadow-sm opacity-0 hidden" />
                    </span>
                    <span className="text-[10px] text-slate-500 font-medium uppercase group-active:text-cyan-400">Rnk</span>
                  </button>
@@ -666,18 +822,22 @@ export default function App() {
                     <Play className="fill-white text-white w-6 h-6" />
                   </div>
                   <div className="flex-1 pr-2 rtl:pl-2 rtl:pr-0">
-                    <p className="font-extrabold text-sm text-slate-100">{t('watchAds')} <span className="text-[10px] bg-slate-900/50 px-1.5 py-0.5 rounded ml-1 font-mono text-pink-300">{adsWatched}/10</span></p>
-                    <p className="text-xs font-bold text-pink-400 mt-1 bg-pink-400/10 inline-flex items-center px-2 py-0.5 rounded-md drop-shadow-sm">+100 <XpIcon className="w-4 h-4 ml-1.5" /></p>
+                    <p className="font-extrabold text-sm text-slate-100">{t('sponsorTasks')} <span className="text-[10px] bg-slate-900/50 px-1.5 py-0.5 rounded ml-1 font-mono text-pink-300">{Math.min(adsWatched, 3)}/3</span></p>
+                    <p className="text-xs font-bold text-pink-400 mt-1 bg-pink-400/10 inline-flex items-center px-2 py-0.5 rounded-md drop-shadow-sm">+1000 <XpIcon className="w-4 h-4 ml-1.5" /></p>
                   </div>
                 </div>
-                {adsWatched >= 10 && lastAdDate === new Date().toDateString() ? (
+                {adsWatched > 3 && lastAdDate === new Date().toDateString() ? (
                   <button disabled className="bg-slate-700 text-slate-300 font-extrabold py-2 px-4 rounded-xl border-b-[3px] border-slate-800 transition-all text-xs shrink-0 cursor-not-allowed flex flex-col items-center justify-center min-w-[80px]">
                     <Clock className="w-4 h-4 mb-0.5 opacity-60" />
                     <span className="font-mono tracking-wider opacity-80">{timeToReset}</span>
                   </button>
-                ) : (
-                  <button onClick={watchAd} className="bg-pink-500 text-white font-extrabold py-2.5 px-6 rounded-xl border-b-[3px] border-pink-700 active:border-b-0 active:translate-y-[3px] transition-all text-sm shrink-0">
+                ) : adsWatched === 3 ? (
+                  <button onClick={claimAdReward} className="bg-emerald-500 text-white font-extrabold py-2.5 px-6 rounded-xl border-b-[3px] border-emerald-700 active:border-b-0 active:translate-y-[3px] transition-all text-sm shrink-0">
                     {t('claim')}
+                  </button>
+                ) : (
+                  <button onClick={triggerAd} className="bg-pink-500 text-white font-extrabold py-2.5 px-5 rounded-xl border-b-[3px] border-pink-700 active:border-b-0 active:translate-y-[3px] transition-all text-sm shrink-0">
+                    {t('watch')}
                   </button>
                 )}
               </div>
@@ -903,28 +1063,28 @@ export default function App() {
       <nav className="shrink-0 bg-slate-800 rounded-t-[32px] px-6 pb-safe border-t border-slate-700/50 shadow-[0_-8px_24px_rgba(0,0,0,0.2)] z-40 relative">
         <div className="flex justify-between items-end h-20 pb-4 pt-2">
           
-          <button onClick={() => setActiveTab('home')} className="flex flex-col items-center justify-end w-16 relative group">
+          <button onClick={() => setActiveTab('home')} className="flex flex-col items-center justify-end w-16 relative group outline-none">
             <div className={`transition-all duration-300 flex items-center justify-center rounded-2xl ${activeTab === 'home' ? 'bg-cyan-500 text-white p-3 mb-1 shadow-lg translate-y-[-10px]' : 'text-slate-400 p-2 group-hover:text-cyan-300'}`}>
               <Home className={`w-6 h-6 transition-transform ${activeTab === 'home' ? 'scale-110' : ''}`} />
             </div>
             <span className={`text-[10px] font-extrabold tracking-wide transition-colors ${activeTab === 'home' ? 'text-cyan-400 delay-100 opacity-100 absolute bottom-[-16px]' : 'text-slate-500 mt-1'}`}>{t('navHome')}</span>
           </button>
 
-          <button onClick={() => setActiveTab('tasks')} className="flex flex-col items-center justify-end w-16 relative group">
+          <button onClick={() => setActiveTab('tasks')} className="flex flex-col items-center justify-end w-16 relative group outline-none">
             <div className={`transition-all duration-300 flex items-center justify-center rounded-2xl ${activeTab === 'tasks' ? 'bg-pink-500 text-white p-3 mb-1 shadow-lg translate-y-[-10px]' : 'text-slate-400 p-2 group-hover:text-pink-300'}`}>
               <Coins className={`w-6 h-6 transition-transform ${activeTab === 'tasks' ? 'scale-110' : ''}`} />
             </div>
             <span className={`text-[10px] font-extrabold tracking-wide transition-colors ${activeTab === 'tasks' ? 'text-pink-400 delay-100 opacity-100 absolute bottom-[-16px]' : 'text-slate-500 mt-1'}`}>{t('navEarn')}</span>
           </button>
 
-          <button onClick={() => setActiveTab('ads')} className="flex flex-col items-center justify-end w-16 relative group">
+          <button onClick={() => setActiveTab('ads')} className="flex flex-col items-center justify-end w-16 relative group outline-none">
             <div className={`transition-all duration-300 flex items-center justify-center rounded-2xl ${activeTab === 'ads' ? 'bg-purple-500 text-white p-3 mb-1 shadow-lg translate-y-[-10px]' : 'text-slate-400 p-2 group-hover:text-purple-300'}`}>
               <PlusCircle className={`w-6 h-6 transition-transform ${activeTab === 'ads' ? 'scale-110' : ''}`} />
             </div>
             <span className={`text-[10px] font-extrabold tracking-wide transition-colors ${activeTab === 'ads' ? 'text-purple-400 delay-100 opacity-100 absolute bottom-[-16px]' : 'text-slate-500 mt-1'}`}>{t('navPromote')}</span>
           </button>
 
-          <button onClick={() => setActiveTab('invite')} className="flex flex-col items-center justify-end w-16 relative group">
+          <button onClick={() => setActiveTab('invite')} className="flex flex-col items-center justify-end w-16 relative group outline-none">
             <div className={`transition-all duration-300 flex items-center justify-center rounded-2xl ${activeTab === 'invite' ? 'bg-orange-500 text-white p-3 mb-1 shadow-lg translate-y-[-10px]' : 'text-slate-400 p-2 group-hover:text-orange-300'}`}>
                <Users className={`w-6 h-6 transition-transform ${activeTab === 'invite' ? 'scale-110' : ''}`} />
             </div>
@@ -947,87 +1107,102 @@ export default function App() {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-slate-800 border-2 border-slate-700 rounded-[32px] w-full max-w-sm p-6 shadow-2xl relative"
+              className="bg-slate-800 border-2 border-slate-700/50 rounded-[32px] w-full max-w-sm p-6 shadow-2xl relative overflow-hidden"
             >
               <button 
                 onClick={() => setIsWalletModalOpen(false)}
-                className="absolute top-4 right-4 rtl:left-4 rtl:right-auto text-slate-400 hover:text-white bg-slate-700 p-1.5 rounded-full"
+                className="absolute top-4 right-4 rtl:left-4 rtl:right-auto text-slate-400 hover:text-white bg-slate-700/50 hover:bg-slate-700 p-1.5 rounded-full transition-colors z-10"
               >
                 <X className="w-5 h-5" />
               </button>
               
               <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-emerald-500/20 rounded-3xl flex items-center justify-center mx-auto mb-3">
-                  <Wallet className="w-8 h-8 text-emerald-400" />
+                <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-[24px] flex items-center justify-center mx-auto mb-3 shadow-[0_0_20px_rgba(52,211,153,0.3)] border border-emerald-300/20">
+                  <Wallet className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-xl font-extrabold text-white">{t('withdraw')}</h3>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 flex items-center justify-center">
-                  {t('withdrawRate')} <TonImage className="w-3 h-3 ml-1 translate-y-[-1px]" />
-                </p>
-                <p className="text-xs text-emerald-400 mt-1 font-bold bg-emerald-400/10 flex items-center justify-center px-2 py-0.5 rounded-md mx-auto w-max">
-                  {t('withdrawMin')} <TonImage className="w-3 h-3 ml-1" />
-                </p>
+                <h3 className="text-xl font-extrabold text-white mb-1">{t('internalWallet')}</h3>
+                <div className="flex items-center justify-center space-x-4 rtl:space-x-reverse text-sm font-bold bg-slate-900/50 rounded-xl py-2 px-4 shadow-inner w-max mx-auto border border-slate-700/50">
+                  <p className="text-slate-300 flex items-center">
+                    <span className="text-amber-400 mr-1.5 rtl:ml-1.5 rtl:mr-0">{points.toLocaleString()}</span> <span className="text-[10px] uppercase text-slate-500">XP</span>
+                  </p>
+                  <div className="w-px h-4 bg-slate-700"></div>
+                  <p className="text-emerald-400 flex items-center">
+                    <span className="mr-1.5 rtl:ml-1.5 rtl:mr-0">{tonBalance}</span> <TonImage className="w-3.5 h-3.5" />
+                  </p>
+                </div>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t('walletAddress')}</label>
-                  <input 
-                    type="text" 
-                    value={withdrawAddress}
-                    onChange={(e) => setWithdrawAddress(e.target.value)}
-                    placeholder="EQ..."
-                    className="w-full bg-slate-900 border-2 border-slate-700 rounded-2xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 transition-colors"
-                  />
-                </div>
+              {/* TABS */}
+              <div className="flex bg-slate-900/80 p-1.5 rounded-2xl mb-6 shadow-inner border border-slate-800">
                 <button 
-                  onClick={handleWithdraw}
-                  className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-extrabold py-3.5 rounded-2xl border-b-[4px] border-green-800 shadow-lg active:border-b-0 active:translate-y-[4px] transition-all"
+                  onClick={() => setWalletTab('convert')}
+                  className={`flex-1 py-2 text-sm font-extrabold rounded-xl transition-all ${walletTab === 'convert' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                  {t('convert')}
+                </button>
+                <button 
+                  onClick={() => setWalletTab('withdraw')}
+                  className={`flex-1 py-2 text-sm font-extrabold rounded-xl transition-all ${walletTab === 'withdraw' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
                 >
                   {t('withdraw')}
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
 
-        {isLeaderboardOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-              className="bg-slate-900 border-2 border-slate-800 rounded-[32px] w-full max-w-sm p-6 shadow-2xl relative max-h-[85vh] flex flex-col"
-            >
-              <button onClick={() => setIsLeaderboardOpen(false)} className="absolute top-4 right-4 rtl:left-4 rtl:right-auto text-slate-400 hover:text-white bg-slate-800 p-1.5 rounded-full z-10">
-                <X className="w-5 h-5" />
-              </button>
-              
-              <div className="text-center mb-5 shrink-0">
-                <h3 className="text-xl font-extrabold text-white flex items-center justify-center">
-                  <span className="text-yellow-400 mr-2 drop-shadow-md">🏆</span> {t('rnkTopLeaders')}
-                </h3>
-              </div>
-
-              <div className="space-y-3 overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden">
-                {LEADERBOARD.map((user, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-sm">
-                    <div className="flex items-center">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black mr-3 shadow-inner text-xs ${idx === 0 ? 'bg-yellow-400 text-slate-900' : idx === 1 ? 'bg-slate-300 text-slate-900' : idx === 2 ? 'bg-amber-700 text-white' : 'bg-slate-700 text-slate-400'}`}>
-                        #{idx + 1}
+              {walletTab === 'convert' && (
+                <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+                  <div className="bg-slate-900/50 border border-slate-700/50 rounded-2xl p-4 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-emerald-400 opacity-50"></div>
+                    <div className="flex justify-between items-center mb-4 relative z-10">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">From</span>
+                        <span className="text-xl font-black text-amber-400 font-mono">10,000 XP</span>
                       </div>
-                      <span className="font-extrabold text-sm text-white font-mono">{user.name}</span>
+                      <ArrowRightLeft className="w-5 h-5 text-slate-500 mx-2" />
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">To</span>
+                        <span className="text-xl font-black text-emerald-400 font-mono flex items-center">1 <TonImage className="w-4 h-4 ml-1.5 rtl:mr-1.5 rtl:ml-0" /></span>
+                      </div>
                     </div>
-                    <div className="flex flex-col items-end">
-                      <span className="font-bold flex items-center text-cyan-400 drop-shadow-sm text-sm">
-                        {user.amount} <TonImage className="w-3.5 h-3.5 ml-1 rtl:mr-1 rtl:ml-0" />
-                      </span>
-                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{t('drawnAmount')}</span>
-                    </div>
+                    <p className="text-[11px] text-center text-slate-400 font-medium">
+                      {t('exchangeInfo')}
+                    </p>
                   </div>
-                ))}
-              </div>
+                  <button 
+                    onClick={handleExchangeXP}
+                    disabled={points < 10000}
+                    className={`w-full font-extrabold py-3.5 rounded-2xl border-b-[4px] shadow-lg active:border-b-0 active:translate-y-[4px] transition-all flex items-center justify-center ${points >= 10000 ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-orange-700' : 'bg-slate-700 text-slate-500 border-slate-800 cursor-not-allowed'}`}
+                  >
+                    <ArrowRightLeft className="w-4 h-4 mr-2" /> {t('convert')}
+                  </button>
+                </motion.div>
+              )}
+
+              {walletTab === 'withdraw' && (
+                <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+                  <div className="text-center">
+                    <p className="text-xs text-emerald-400 font-bold bg-emerald-400/10 inline-flex items-center px-2.5 py-1 rounded-lg border border-emerald-500/20 shadow-sm">
+                      {t('withdrawMin')} <TonImage className="w-3.5 h-3.5 ml-1.5 rtl:mr-1.5 rtl:ml-0" />
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t('walletAddress')}</label>
+                    <input 
+                      type="text" 
+                      value={withdrawAddress}
+                      onChange={(e) => setWithdrawAddress(e.target.value)}
+                      placeholder="EQ..."
+                      className="w-full bg-slate-900 border-2 border-slate-700 rounded-2xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 transition-colors placeholder:text-slate-600"
+                    />
+                  </div>
+                  <button 
+                    onClick={handleWithdraw}
+                    disabled={tonBalance < 4 || !withdrawAddress}
+                    className={`w-full font-extrabold py-3.5 rounded-2xl border-b-[4px] shadow-lg active:border-b-0 active:translate-y-[4px] transition-all flex items-center justify-center ${tonBalance >= 4 && withdrawAddress ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-teal-700' : 'bg-slate-700 text-slate-500 border-slate-800 cursor-not-allowed'}`}
+                  >
+                    <Send className="w-4 h-4 mr-2" /> {t('withdraw')}
+                  </button>
+                </motion.div>
+              )}
             </motion.div>
           </motion.div>
         )}
@@ -1036,12 +1211,12 @@ export default function App() {
       {/* Global Message Modal / Popup Replacement */}
       <AnimatePresence>
         {appModal.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm w-full max-w-[100vw] overflow-hidden">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-slate-800 border-2 border-slate-700/50 p-6 rounded-[28px] shadow-2xl max-w-sm w-full relative"
+              className="bg-slate-800 border-2 border-slate-700/50 p-6 rounded-[28px] shadow-2xl max-w-sm w-full relative overflow-x-hidden"
             >
               <h3 className="text-xl font-extrabold text-white mb-3 text-center">{appModal.title}</h3>
               <p className="text-slate-300 text-sm font-medium whitespace-pre-line leading-relaxed mb-6 text-center">
@@ -1058,6 +1233,109 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Notifications / Messages Desktop Panel */}
+      <AnimatePresence>
+        {isNotifOpen && (
+          <motion.div
+            initial={{ opacity: 0, x: '100%' }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[110] bg-slate-900 flex flex-col w-full max-w-[100vw] overflow-x-hidden"
+          >
+            <div className="flex items-center justify-between px-5 pt-6 pb-4 border-b border-slate-800 bg-slate-900 z-10 shrink-0">
+              <h2 className="text-xl font-black text-white flex items-center">
+                <Folder className="w-6 h-6 mr-3 text-cyan-400" /> System Files
+              </h2>
+              <button onClick={() => setIsNotifOpen(false)} className="p-2 bg-slate-800/80 rounded-full text-slate-300 hover:bg-slate-700 transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-slate-900">
+              {notifications.length === 0 ? (
+                <div className="text-center text-slate-500 mt-10">No system files found.</div>
+              ) : (
+                notifications.map(notif => (
+                  <motion.button
+                    key={notif.id}
+                    onClick={() => {
+                      setSelectedNotif(notif);
+                      markAsRead(notif.id);
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`w-full flex items-start text-left p-4 rounded-[20px] border-[2px] transition-all bg-slate-800/50 hover:bg-slate-800 shadow-md ${!notif.isRead ? 'border-cyan-500/50 bg-cyan-900/10' : 'border-slate-700/50'}`}
+                  >
+                    <div className={`p-3 rounded-2xl mr-4 shrink-0 shadow-inner ${!notif.isRead ? 'bg-cyan-500 text-white' : 'bg-slate-700 text-slate-400'}`}>
+                      {notif.iconType === 'update' && <FileText className="w-5 h-5" />}
+                      {notif.iconType === 'event' && <FileText className="w-5 h-5" />}
+                      {notif.iconType === 'alert' && <FileText className="w-5 h-5" />}
+                      {notif.iconType === 'gift' && <FileText className="w-5 h-5" />}
+                    </div>
+                    <div className="flex-1 pt-1 overflow-hidden">
+                      <div className="flex justify-between items-center mb-1">
+                         <h4 className={`font-extrabold text-sm truncate pr-2 ${!notif.isRead ? 'text-white' : 'text-slate-300'}`}>
+                           {notif.title}
+                         </h4>
+                         {!notif.isRead && <span className="w-2 h-2 bg-red-500 rounded-full shrink-0"></span>}
+                      </div>
+                      <p className="text-xs text-slate-400 font-medium truncate mb-2">{notif.content}</p>
+                      <span className="text-[10px] text-slate-500 font-bold tracking-wider uppercase">{notif.date}</span>
+                    </div>
+                  </motion.button>
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Selected Notification Bottom Sheet */}
+      <AnimatePresence>
+        {selectedNotif && (
+          <motion.div 
+            initial={{ opacity: 0, y: '100%' }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: '100%' }}
+            transition={{ type: 'spring', damping: 22, stiffness: 180 }}
+            className="fixed inset-0 z-[120] flex flex-col justify-end w-full max-w-[100vw] overflow-x-hidden"
+          >
+            <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={() => setSelectedNotif(null)} />
+            <div className="bg-slate-800 rounded-t-[36px] p-6 pb-10 shadow-2xl relative border-t-[3px] border-slate-700 w-full max-h-[80vh] flex flex-col">
+              <div className="w-14 h-1.5 bg-slate-600 rounded-full mx-auto mb-6 opacity-80" />
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center">
+                   <div className="w-12 h-12 bg-indigo-500/20 text-indigo-400 rounded-2xl flex items-center justify-center mr-4 border border-indigo-500/30">
+                     {selectedNotif.iconType === 'update' && <Megaphone className="w-6 h-6" />}
+                     {selectedNotif.iconType === 'event' && <Gamepad2 className="w-6 h-6" />}
+                     {selectedNotif.iconType === 'alert' && <ShieldCheck className="w-6 h-6 text-red-400" />}
+                     {selectedNotif.iconType === 'gift' && <Gift className="w-6 h-6" />}
+                   </div>
+                   <div>
+                     <h3 className="text-lg font-black text-white leading-tight">{selectedNotif.title}</h3>
+                     <span className="text-[11px] text-slate-400 font-bold tracking-wider uppercase mt-1 inline-block">{selectedNotif.date}</span>
+                   </div>
+                </div>
+                <button onClick={() => setSelectedNotif(null)} className="p-2 bg-slate-700/50 rounded-full text-slate-300">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto mb-6 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb]:rounded-full pr-2">
+                 <p className="text-sm font-medium text-slate-300 leading-relaxed whitespace-pre-line">
+                   {selectedNotif.content}
+                 </p>
+              </div>
+              <button 
+                onClick={() => setSelectedNotif(null)}
+                className="w-full bg-cyan-600 text-white font-extrabold py-4 rounded-2xl border-b-[4px] border-cyan-800 shadow-xl active:border-b-0 active:translate-y-[4px] transition-all text-sm mb-2"
+              >
+                Superb, understood!
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Leaderboard Modal */}
       <AnimatePresence>
         {isLeaderboardOpen && (
@@ -1066,7 +1344,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-50 flex flex-col justify-end"
+            className="fixed inset-0 z-50 flex flex-col justify-end w-full max-w-[100vw] overflow-x-hidden"
           >
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsLeaderboardOpen(false)} />
             <div className="bg-slate-800 rounded-t-[32px] p-5 pb-8 shadow-2xl relative border-t-2 border-slate-700 w-full max-h-[85vh] flex flex-col">
@@ -1082,26 +1360,18 @@ export default function App() {
               </div>
 
               <div className="flex-1 overflow-y-auto space-y-3 pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb]:rounded-full">
-                {/* Simulated Leaderboard Data */}
                 {[
                   { name: MOCK_NAMES[0], score: 4520000 },
                   { name: MOCK_NAMES[1], score: 3890000 },
                   { name: MOCK_NAMES[2], score: 3254000 },
-                  { name: userName, score: points, isMe: true }, // Current user injected
-                  { name: MOCK_NAMES[3], score: 2900000 },
-                  { name: MOCK_NAMES[4], score: 1850000 },
-                  { name: MOCK_NAMES[5], score: 1420000 },
-                  { name: MOCK_NAMES[6], score: 980000 },
-                ]
-                .sort((a, b) => b.score - a.score)
-                .map((user, idx) => (
-                  <div key={user.name + idx} className={`flex items-center justify-between p-3 rounded-2xl border-l-[4px] ${user.isMe ? 'bg-indigo-900/40 border-indigo-500 shadow-md' : 'bg-slate-900/50 border-slate-700'}`}>
+                ].map((user, idx) => (
+                  <div key={user.name + idx} className="flex items-center justify-between p-3 rounded-2xl border-l-[4px] bg-slate-900/50 border-slate-700">
                      <div className="flex items-center">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm mr-3 rtl:ml-3 rtl:mr-0 ${idx === 0 ? 'bg-yellow-500 text-white shadow-[0_0_10px_rgba(234,179,8,0.5)]' : idx === 1 ? 'bg-slate-300 text-slate-800' : idx === 2 ? 'bg-amber-700 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm mr-3 rtl:ml-3 rtl:mr-0 ${idx === 0 ? 'bg-yellow-500 text-white shadow-[0_0_10px_rgba(234,179,8,0.5)]' : idx === 1 ? 'bg-slate-300 text-slate-800' : 'bg-amber-700 text-white'}`}>
                            #{idx + 1}
                         </div>
-                        <span className={`font-bold text-sm ${user.isMe ? 'text-indigo-300' : 'text-slate-300'}`}>
-                           {user.isMe ? `${user.name} (You)` : user.name}
+                        <span className="font-bold text-sm text-slate-300">
+                           {user.name}
                         </span>
                      </div>
                      <span className="font-mono font-bold text-amber-400 text-sm">
@@ -1109,6 +1379,26 @@ export default function App() {
                      </span>
                   </div>
                 ))}
+
+                {calculatedUserRank > 3 && (
+                  <div className="flex justify-center items-center py-2">
+                     <span className="text-slate-600 text-xl tracking-[0.2em] leading-none">•••</span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between p-3 rounded-2xl border-l-[4px] bg-indigo-900/40 border-indigo-500 shadow-md">
+                   <div className="flex items-center">
+                      <div className="min-w-[2rem] h-8 px-2 rounded-full flex items-center justify-center font-bold text-sm mr-3 rtl:ml-3 rtl:mr-0 bg-slate-800/80 text-slate-300 border border-slate-600/50">
+                         #{calculatedUserRank.toLocaleString()}
+                      </div>
+                      <span className="font-bold text-sm text-indigo-300">
+                         {userName} (You)
+                      </span>
+                   </div>
+                   <span className="font-mono font-bold text-amber-400 text-sm">
+                      {points.toLocaleString()} XP
+                   </span>
+                </div>
               </div>
             </div>
           </motion.div>
