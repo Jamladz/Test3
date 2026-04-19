@@ -341,7 +341,11 @@ export default function App() {
             if (userSnap.exists()) {
                await updateDoc(userRef, { points: increment(200) });
             }
-            WebApp.showAlert(t('refWelcome') || 'Welcome via referral! You received +200 XP.');
+            if (WebApp.isVersionAtLeast('6.2')) {
+              WebApp.showAlert(t('refWelcome') || 'Welcome via referral! You received +200 XP.');
+            } else {
+              showMessage('Referral', t('refWelcome') || 'Welcome via referral! You received +200 XP.');
+            }
            } catch (e: any) {
              console.error("Referral process error", e?.message || String(e));
            }
@@ -439,24 +443,19 @@ export default function App() {
         try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
       }).catch((e: any) => {
         console.error("Ad failed", e);
-        WebApp.showAlert(t('adError') || "Failed to load ad. Please try again.");
+        // Fallback for simple alert if WebApp method fails on old versions
+        try {
+          if (WebApp.isVersionAtLeast('6.2')) {
+            WebApp.showAlert(t('adError') || "Ad failed or skipped.");
+          } else {
+            alert(t('adError') || "Ad failed or skipped.");
+          }
+        } catch (err) {
+          alert("Ad failed or skipped.");
+        }
       });
     } else {
-      // Check if we're in Telegram but script isn't ready
-      if (WebApp.platform !== 'unknown') {
-        WebApp.showAlert(t('adNotReady') || "Ad system is loading... Please try again in a few seconds.");
-      } else {
-        // Desktop / Preview fallback to allow testing without white screen
-        WebApp.showConfirm("Ads require Telegram app. Simulate success for testing?", (confirmed) => {
-          if (confirmed) {
-            const today = new Date().toDateString();
-            if (adsWatched < WATCH_LIMIT) {
-              setAdsWatched(prev => prev + 1);
-              setLastAdDate(today);
-            }
-          }
-        });
-      }
+      console.warn("Adsgram script not loaded or environment not Telegram.");
     }
   };
 
@@ -467,19 +466,28 @@ export default function App() {
       AdController.show().then(() => {
         setAdSpinsCount(prev => prev + 1);
         localStorage.setItem('tonew_wheel_ad_spins', (adSpinsCount + 1).toString());
-        WebApp.HapticFeedback.notificationOccurred('success');
-        WebApp.showAlert("+1 Spin Added!");
+        try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
+        try {
+          if (WebApp.isVersionAtLeast('6.2')) {
+            WebApp.showAlert("+1 Spin Added!");
+          } else {
+            alert("+1 Spin Added!");
+          }
+        } catch (err) {
+          alert("+1 Spin Added!");
+        }
       }).catch((e: any) => {
         console.error("Wheel ad failed", e);
-        WebApp.showAlert(t('adError') || "Ad placement failed.");
+        try {
+          if (WebApp.isVersionAtLeast('6.2')) {
+            WebApp.showAlert(t('adError') || "Ad placement failed.");
+          } else {
+            alert(t('adError') || "Ad placement failed.");
+          }
+        } catch (err) {
+          alert("Ad placement failed.");
+        }
       });
-    } else {
-      if (WebApp.platform !== 'unknown') {
-        WebApp.showAlert(t('adNotReady') || "Loading ad system...");
-      } else {
-        setAdSpinsCount(prev => prev + 1);
-        WebApp.showAlert("DEBUG: +1 Spin Added (Simulated)");
-      }
     }
   };
 
@@ -550,9 +558,16 @@ export default function App() {
     const result = spinWheel();
     if (!result) {
       if (adSpinsCount === 0) {
-        WebApp.showConfirm("You used your daily free spin. Want to spin again by watching an ad?", (ok) => {
-          if (ok) triggerWheelAd();
-        });
+        const confirmMsg = "You used your daily free spin. Want to spin again by watching an ad?";
+        if (WebApp.isVersionAtLeast('6.2')) {
+          WebApp.showConfirm(confirmMsg, (ok) => {
+            if (ok) triggerWheelAd();
+          });
+        } else {
+          if (window.confirm(confirmMsg)) {
+            triggerWheelAd();
+          }
+        }
       }
       return;
     }
