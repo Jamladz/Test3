@@ -16,7 +16,7 @@ const IMAGES = [
 
 const TILE_SIZE = 46; 
 const BOARD_SIZE = 300; 
-const TRAY_CAPACITY = 7;
+const TRAY_CAPACITY = 6;
 
 interface TileData {
   id: string;
