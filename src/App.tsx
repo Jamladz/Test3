@@ -415,13 +415,14 @@ export default function App() {
 
   const WATCH_LIMIT = 3;
   const XP_REWARD_AFTER_3 = 100;
-  const ADSGRAM_BLOCK_ID = "int-28074";
+  const ADS_WATCH_ID = "int-28074";
+  const ADS_WHEEL_ID = "int-28173";
 
   const triggerAd = () => {
     // @ts-ignore
     if (window.Adsgram) {
       // @ts-ignore
-      const AdController = window.Adsgram.init({ blockId: ADSGRAM_BLOCK_ID });
+      const AdController = window.Adsgram.init({ blockId: ADS_WATCH_ID });
       AdController.show().then(() => {
         const today = new Date().toDateString();
         let currentWatched = adsWatched;
@@ -452,7 +453,7 @@ export default function App() {
     // @ts-ignore
     if (window.Adsgram) {
       // @ts-ignore
-      const AdController = window.Adsgram.init({ blockId: ADSGRAM_BLOCK_ID });
+      const AdController = window.Adsgram.init({ blockId: ADS_WHEEL_ID });
       AdController.show().then(() => {
         setAdSpinsCount(prev => prev + 1);
         localStorage.setItem('tonew_wheel_ad_spins', (adSpinsCount + 1).toString());
