@@ -175,24 +175,27 @@ export const AppMiniGame = ({ onClose, onEarn }: { onClose: () => void, onEarn: 
 
   // --- Ad Integration for Powerups ---
   const runWithAd = async (action: () => void) => {
-      // @ts-ignore
-      if (window.Adsgram) {
+      const Adsgram = (window as any).Adsgram;
+      if (Adsgram) {
           setIsAdLoading(true);
           try {
-              // @ts-ignore
-              const AdController = window.Adsgram.init({ blockId: "int-28175" });
+              const AdController = Adsgram.init({ blockId: "int-28175" });
               await AdController.show();
               setIsAdLoading(false);
               action();
           } catch (e) {
-              console.warn("Ad skipped, failed or environment error:", e?.message || String(e));
+              console.warn("Ad skipped or failed:", e?.message || String(e));
               setIsAdLoading(false);
-              // Fallback for preview/AI Studio environment out of Telegram
-              action();
+              WebApp.showAlert(t('adError') || "Ad failed. Please try again.");
           }
       } else {
-          // If no adsgram available (local env/demo), just run action
-          action();
+          // Check if in telegram, show loading message if script not ready
+          if (WebApp.platform !== 'unknown') {
+              WebApp.showAlert(t('adNotReady') || "Ad system is initializing...");
+          } else {
+              // Simulated success for preview/web testing
+              action();
+          }
       }
   };
 
