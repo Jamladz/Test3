@@ -279,84 +279,6 @@ export default function App() {
   };
 
   useEffect(() => {
-    // Cross-device persistence syncing (Simulated Backend Retrieval via Telegram ID)
-    const syncKeyPrefix = `tonew_cloud_${userId}_`;
-    
-    const loadState = (key: string, defaultValue: any, isJson = false) => {
-       const cloud = localStorage.getItem(syncKeyPrefix + key); // Simulating fetching from DB using userId
-       const local = localStorage.getItem(key);
-       const target = cloud || local; // prefer cloud
-       
-       if (!target && defaultValue !== undefined) return defaultValue;
-       if (!target) return '';
-       
-       if (isJson) {
-         try { return JSON.parse(target); } catch(e) { return defaultValue; }
-       }
-       return target;
-    };
-
-    // Load tasks state (cloud synced)
-    const storedLastAd = loadState('tonew_last_ad', '');
-    const storedAdsProgress = loadState('tonew_ads_progress', '0');
-    if (storedLastAd === new Date().toDateString()) {
-      setLastAdDate(storedLastAd);
-      setAdsWatched(Number(storedAdsProgress) || 0);
-    } else {
-      setAdsWatched(0);
-      setLastAdDate(new Date().toDateString());
-    }
-    
-    const parsedTasks = loadState('tonew_completed_tasks', [], true);
-    if (Array.isArray(parsedTasks)) setCompletedTasks(parsedTasks);
-
-    // Wheel state
-    const storedLastWheelDate = loadState('tonew_last_wheel_date', '');
-    const storedAdSpins = loadState('tonew_wheel_ad_spins', '0');
-    setLastWheelDate(storedLastWheelDate);
-    setAdSpinsCount(Number(storedAdSpins) || 0);
-
-    const storedLastWheelAdDate = loadState('tonew_last_wheel_ad_date', '');
-    const storedWheelAdsWatched = loadState('tonew_wheel_ads_watched', '0');
-    if (storedLastWheelAdDate === new Date().toDateString()) {
-      setLastWheelAdDate(storedLastWheelAdDate);
-      setWheelAdsWatched(Number(storedWheelAdsWatched) || 0);
-    } else {
-      setLastWheelAdDate(new Date().toDateString());
-      setWheelAdsWatched(0);
-    }
-
-    const parsedAds = loadState('tonew_created_ads', [], true);
-    if (Array.isArray(parsedAds)) setCreatedAds(parsedAds);
-    
-    // Referral state sync
-    const startParam = WebApp.initDataUnsafe?.start_param;
-    const isReturning = loadState('tonew_is_returning', 'false');
-    
-    // If it's a new user and they have a start param matching another ID, credit the referrer
-    if (startParam && startParam !== String(userId) && isReturning === 'false') {
-       /* In a real DB, you'd increment the referrer's count here: DB.updateReferrals(startParam, +1) */
-    }
-    
-    // Simulate current user's refs. If DB is empty, maybe default to 0. (Load from 'cloud' localstorage in our mock backend)
-    const storedRefs = loadState('tonew_referrals', '0');
-    setReferralsCount(Number(storedRefs));
-    localStorage.setItem(syncKeyPrefix + 'tonew_is_returning', 'true');
-    localStorage.setItem('tonew_is_returning', 'true');
-
-
-    // Wrapper to ensure future logic writes to our "simulated cloud" backend
-    if (!(localStorage as any)._hooked) {
-      const _setItemOriginal = localStorage.setItem.bind(localStorage);
-      localStorage.setItem = (key, val) => {
-        _setItemOriginal(key, val);
-        if (key.startsWith('tonew_') && !key.startsWith('tonew_cloud_')) {
-          _setItemOriginal(`tonew_cloud_${userId}_${key}`, val);
-        }
-      };
-      (localStorage as any)._hooked = true;
-    }
-    
     // Initialize Web App
     WebApp.ready();
     WebApp.setHeaderColor('#1e293b'); // slate-800
@@ -539,16 +461,15 @@ export default function App() {
         await AdController.show();
         
         const today = new Date().toDateString();
-        let currentWatched = adsWatched;
-        if (lastAdDate !== today) {
-           currentWatched = 0;
-           setLastAdDate(today);
-        }
+        // Compute actual watch state reliably derived from dates
+        const currentWatched = lastAdDate === today ? adsWatched : 0;
         
         if (currentWatched < WATCH_LIMIT) {
            const newWatched = currentWatched + 1;
+           setLastAdDate(today);
            setAdsWatched(newWatched);
-           pushUserData({ lastAdDate: today, adsWatched: increment(1) });
+           // Hard set the value to perfectly sync state, avoid increment() over unknown state.
+           pushUserData({ lastAdDate: today, adsWatched: newWatched });
         } else {
            pushUserData({ lastAdDate: today });
         }
@@ -577,12 +498,7 @@ export default function App() {
     
     // STRICT Anti-farm limitation for wheel ads (3 per day max allowed)
     const today = new Date().toDateString();
-    let currentWatches = wheelAdsWatched;
-    if (lastWheelAdDate !== today) {
-       currentWatches = 0;
-       setLastWheelAdDate(today);
-       localStorage.setItem('tonew_last_wheel_ad_date', today);
-    }
+    const currentWatches = lastWheelAdDate === today ? wheelAdsWatched : 0;
     
     if (currentWatches >= 3) {
       showMessage("Limit Reached", "You have already watched the maximum 3 daily wheel ads today.");
@@ -597,13 +513,13 @@ export default function App() {
         await AdController.show();
         
         const newWatched = currentWatches + 1;
+        setLastWheelAdDate(today);
         setWheelAdsWatched(newWatched);
-        
         setAdSpinsCount(prev => prev + 1);
         
         pushUserData({
            lastWheelAdDate: today,
-           wheelAdsWatched: increment(1),
+           wheelAdsWatched: newWatched, // absolute set to completely override old days' value securely
            adSpinsCount: increment(1)
         });
         
@@ -681,7 +597,10 @@ export default function App() {
   };
 
   const claimAdReward = () => {
-    if (adsWatched === WATCH_LIMIT) {
+    const today = new Date().toDateString();
+    const currentWatched = lastAdDate === today ? adsWatched : 0;
+    
+    if (currentWatched === WATCH_LIMIT) {
       const newWatched = WATCH_LIMIT + 1; // Mark as claimed
       setAdsWatched(newWatched);
       
@@ -1195,16 +1114,16 @@ export default function App() {
                     <Play className="fill-white text-white w-6 h-6" />
                   </div>
                   <div className="flex-1 pr-2 rtl:pl-2 rtl:pr-0">
-                    <p className="font-extrabold text-sm text-slate-100">{t('sponsorTasks')} <span className="text-[10px] bg-slate-900/50 px-1.5 py-0.5 rounded ml-1 font-mono text-pink-300">{Math.min(adsWatched, 3)}/3</span></p>
+                    <p className="font-extrabold text-sm text-slate-100">{t('sponsorTasks')} <span className="text-[10px] bg-slate-900/50 px-1.5 py-0.5 rounded ml-1 font-mono text-pink-300">{Math.min(lastAdDate === new Date().toDateString() ? adsWatched : 0, 3)}/3</span></p>
                     <p className="text-xs font-bold text-pink-400 mt-1 bg-pink-400/10 inline-flex items-center px-2 py-0.5 rounded-md drop-shadow-sm">+100 <XpIcon className="w-4 h-4 ml-1.5" /></p>
                   </div>
                 </div>
-                {adsWatched > 3 && lastAdDate === new Date().toDateString() ? (
+                {(lastAdDate === new Date().toDateString() && adsWatched > 3) ? (
                   <button disabled className="bg-slate-700 text-slate-300 font-extrabold py-2 px-4 rounded-xl border-b-[3px] border-slate-800 transition-all text-xs shrink-0 cursor-not-allowed flex flex-col items-center justify-center min-w-[80px]">
                     <Clock className="w-4 h-4 mb-0.5 opacity-60" />
                     <span className="font-mono tracking-wider opacity-80">{timeToReset}</span>
                   </button>
-                ) : adsWatched === 3 ? (
+                ) : (lastAdDate === new Date().toDateString() && adsWatched === 3) ? (
                   <button onClick={claimAdReward} className="bg-emerald-500 text-white font-extrabold py-2.5 px-6 rounded-xl border-b-[3px] border-emerald-700 active:border-b-0 active:translate-y-[3px] transition-all text-sm shrink-0">
                     {t('claim')}
                   </button>
@@ -1825,15 +1744,15 @@ export default function App() {
                   {isSpinning ? 'Good Luck!' : (lastWheelDate !== new Date().toDateString() ? t('freeSpin') : t('spin'))}
                 </button>
 
-                {lastWheelDate === new Date().toDateString() && wheelAdsWatched < 3 && !isSpinning && (
+                {lastWheelDate === new Date().toDateString() && (lastWheelAdDate === new Date().toDateString() ? wheelAdsWatched : 0) < 3 && !isSpinning && (
                   <button 
                     onClick={triggerWheelAd}
                     className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-black text-xs uppercase tracking-widest rounded-2xl border border-slate-700/50 transition-all flex items-center justify-center"
                   >
-                    <Megaphone className="w-4 h-4 mr-2" /> Get +1 Ad Spin ({wheelAdsWatched}/3)
+                    <Megaphone className="w-4 h-4 mr-2" /> Get +1 Ad Spin ({lastWheelAdDate === new Date().toDateString() ? wheelAdsWatched : 0}/3)
                   </button>
                 )}
-                {lastWheelDate === new Date().toDateString() && wheelAdsWatched >= 3 && adSpinsCount === 0 && !isSpinning && (
+                {lastWheelDate === new Date().toDateString() && (lastWheelAdDate === new Date().toDateString() ? wheelAdsWatched : 0) >= 3 && adSpinsCount === 0 && !isSpinning && (
                   <button disabled className="w-full py-3 bg-slate-800 text-slate-500 font-black text-xs uppercase tracking-widest rounded-2xl border border-slate-700/50 transition-all flex items-center justify-center cursor-not-allowed">
                     <Clock className="w-4 h-4 mr-2 opacity-60" /> Next ad spin in: {timeToReset}
                   </button>
