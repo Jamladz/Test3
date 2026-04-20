@@ -140,15 +140,89 @@ export default function App() {
   const { t, i18n } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState<string>('Guest');
-  const [points, setPoints] = useState<number>(0);
-  const [tonBalance, setTonBalance] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<'home' | 'tasks' | 'ads' | 'invite'>('home');
-  
-  // Tasks System
-  const [completedTasks, setCompletedTasks] = useState<string[]>([]);
-  const [pendingTasks, setPendingTasks] = useState<Record<string, number>>({});
-  const [lastAdDate, setLastAdDate] = useState<string>('');
-  const [adTasks, setAdTasks] = useState([
+  // --- Updated: LocalStorage State Management ---
+  const loadState = <T,>(key: string, defaultValue: T): T => {
+    const saved = localStorage.getItem(`tonew_${key}`);
+    return saved ? JSON.parse(saved) : defaultValue;
+  };
+
+  const saveState = (key: string, value: any) => {
+    localStorage.setItem(`tonew_${key}`, JSON.stringify(value));
+  };
+
+  const [points, setPoints] = useState<number>(() => loadState('points', 0));
+  const [tonBalance, setTonBalance] = useState<number>(() => loadState('tonBalance', 0));
+  const [adsWatched, setAdsWatched] = useState<number>(() => loadState('adsWatched', 0));
+  const [lastAdClaimDate, setLastAdClaimDate] = useState<string>(() => loadState('lastAdClaimDate', ''));
+  const [wheelAdsWatched, setWheelAdsWatched] = useState<number>(() => loadState('wheelAdsWatched', 0));
+  const [lastWheelDate, setLastWheelDate] = useState<string>(() => loadState('lastWheelDate', ''));
+
+  useEffect(() => {
+    saveState('points', points);
+    saveState('tonBalance', tonBalance);
+    saveState('adsWatched', adsWatched);
+    saveState('lastAdClaimDate', lastAdClaimDate);
+    saveState('wheelAdsWatched', wheelAdsWatched);
+    saveState('lastWheelDate', lastWheelDate);
+  }, [points, tonBalance, adsWatched, lastAdClaimDate, wheelAdsWatched, lastWheelDate]);
+
+  // --- Updated Ad Logic ---
+  const triggerAd = async () => {
+    const today = new Date().toDateString();
+    if (lastAdClaimDate === today && adsWatched >= WATCH_LIMIT) {
+       showMessage("Limit Reached", "Daily limit reached. Try again tomorrow.");
+       return;
+    }
+
+    const Adsgram = (window as any).Adsgram;
+    if (Adsgram) {
+      setIsAdLoading(true);
+      try {
+        const AdController = Adsgram.init({ blockId: ADS_WATCH_ID });
+        await AdController.show();
+        
+        const newWatched = (lastAdDate === today ? adsWatched : 0) + 1;
+        setAdsWatched(newWatched);
+        setLastAdDate(today);
+
+        setIsAdLoading(false);
+      } catch (e: any) {
+        setIsAdLoading(false);
+        // Silently fail to avoid intrusive popups as requested
+      }
+    }
+  };
+
+  const claimAdReward = () => {
+    const today = new Date().toDateString();
+    if (adsWatched >= WATCH_LIMIT && lastAdClaimDate !== today) {
+      setPoints(p => p + XP_REWARD_AFTER_3);
+      setLastAdClaimDate(today);
+      WebApp.HapticFeedback.notificationOccurred('success');
+    }
+  };
+
+  const spinWheel = () => {
+    const today = new Date().toDateString();
+    if (lastWheelDate === today) {
+      showMessage("Wait", "You already spun today. Try again tomorrow.");
+      return;
+    }
+
+    const rewards = [
+      { label: '5 XP', type: 'xp', value: 5 },
+      { label: '10 XP', type: 'xp', value: 10 },
+      { label: '15 XP', type: 'xp', value: 15 },
+      { label: '0.005 TON', type: 'ton', value: 0.005 },
+    ];
+    const selected = rewards[Math.floor(Math.random() * rewards.length)];
+
+    if (selected.type === 'xp') setPoints(p => p + selected.value);
+    else setTonBalance(b => b + selected.value);
+    
+    setLastWheelDate(today);
+    return selected;
+  };
     { id: 'miniapp_gamee', title: 'Play Gamee Mini App', reward: 100, link: 'https://t.me/gamee/start?startapp=eyJyZWYiOjEzNjg4OTk4NDJ9', type: 'telegram' },
     { id: 'yt_whiteboard', title: 'Sub Whiteboard Crypto', reward: 50, link: 'https://youtube.com/@whiteboardcrypto?si=EqK3R0Ch_fXhKTYK', type: 'youtube' },
     { id: 'yt_coincodex', title: 'Sub CoinCodex', reward: 50, link: 'https://youtube.com/@coincodex?si=afSZv7q0xW-h7b7u', type: 'youtube' },
