@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import WebApp from '@twa-dev/sdk';
 import { useTranslation } from 'react-i18next';
 import { TonConnectButton, useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
-import { Wallet, PlusCircle, Users, Play, Coins, Activity, Send, X, ExternalLink, Copy, Share2, Check, Home, ShieldCheck, Clock, Gamepad2, Trophy, Bell, FileText, Megaphone, Gift, ChevronRight, Folder, Globe, ArrowRightLeft, Sparkles, RefreshCw, Instagram, Youtube } from 'lucide-react';
+import { Wallet, PlusCircle, Users, Play, Coins, Activity, Send, X, ExternalLink, Copy, Share2, Check, Home, ShieldCheck, Clock, Gamepad2, Trophy, Bell, FileText, Megaphone, Gift, ChevronRight, Folder, Globe, ArrowRightLeft, Sparkles, RefreshCw, Instagram, Youtube, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AppLoadingScreen } from './components/AppLoadingScreen';
 import { AppMiniGame } from './components/AppMiniGame';
@@ -191,6 +191,7 @@ export default function App() {
   const [lastWheelDate, setLastWheelDate] = useState('');
   const [adSpinsCount, setAdSpinsCount] = useState(0);
   const [adsWatched, setAdsWatched] = useState(0);
+  const [isAdLoading, setIsAdLoading] = useState(false);
 
   // Notifications State
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -422,11 +423,15 @@ export default function App() {
   const ADS_WATCH_ID = "int-28074";
   const ADS_WHEEL_ID = "int-28173";
 
-  const triggerAd = () => {
+  const triggerAd = async () => {
+    if (isAdLoading) return;
     const Adsgram = (window as any).Adsgram;
     if (Adsgram) {
-      const AdController = Adsgram.init({ blockId: ADS_WATCH_ID });
-      AdController.show().then(() => {
+      setIsAdLoading(true);
+      try {
+        const AdController = Adsgram.init({ blockId: ADS_WATCH_ID });
+        await AdController.show();
+        
         const today = new Date().toDateString();
         let currentWatched = adsWatched;
         if (lastAdDate !== today) {
@@ -441,9 +446,10 @@ export default function App() {
            localStorage.setItem('tonew_ads_progress', newWatched.toString());
         }
         try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
-      }).catch((e: any) => {
-        console.error("Ad failed", e);
-        // Fallback for simple alert if WebApp method fails on old versions
+        setIsAdLoading(false);
+      } catch (e: any) {
+        console.warn("Ad skipped or failed", e);
+        setIsAdLoading(false);
         try {
           if (WebApp.isVersionAtLeast('6.2')) {
             WebApp.showAlert(t('adError') || "Ad failed or skipped.");
@@ -453,20 +459,26 @@ export default function App() {
         } catch (err) {
           alert("Ad failed or skipped.");
         }
-      });
+      }
     } else {
-      console.warn("Adsgram script not loaded or environment not Telegram.");
+      showMessage("Ads Unavailable", "The ad system is currently unavailable. If you are using an ad-blocker, please disable it to earn rewards.");
     }
   };
 
-  const triggerWheelAd = () => {
+  const triggerWheelAd = async () => {
+    if (isAdLoading) return;
     const Adsgram = (window as any).Adsgram;
     if (Adsgram) {
-      const AdController = Adsgram.init({ blockId: ADS_WHEEL_ID });
-      AdController.show().then(() => {
+      setIsAdLoading(true);
+      try {
+        const AdController = Adsgram.init({ blockId: ADS_WHEEL_ID });
+        await AdController.show();
+        
         setAdSpinsCount(prev => prev + 1);
         localStorage.setItem('tonew_wheel_ad_spins', (adSpinsCount + 1).toString());
         try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
+        setIsAdLoading(false);
+        
         try {
           if (WebApp.isVersionAtLeast('6.2')) {
             WebApp.showAlert("+1 Spin Added!");
@@ -476,8 +488,9 @@ export default function App() {
         } catch (err) {
           alert("+1 Spin Added!");
         }
-      }).catch((e: any) => {
-        console.error("Wheel ad failed", e);
+      } catch (e: any) {
+        console.warn("Wheel ad failed", e);
+        setIsAdLoading(false);
         try {
           if (WebApp.isVersionAtLeast('6.2')) {
             WebApp.showAlert(t('adError') || "Ad placement failed.");
@@ -487,7 +500,9 @@ export default function App() {
         } catch (err) {
           alert("Ad placement failed.");
         }
-      });
+      }
+    } else {
+      showMessage("Ads Unavailable", "The ad system is currently unavailable. If you are using an ad-blocker, please disable it to spin the wheel.");
     }
   };
 
@@ -1059,8 +1074,8 @@ export default function App() {
                     {t('claim')}
                   </button>
                 ) : (
-                  <button onClick={triggerAd} className="bg-pink-500 text-white font-extrabold py-2.5 px-5 rounded-xl border-b-[3px] border-pink-700 active:border-b-0 active:translate-y-[3px] transition-all text-sm shrink-0">
-                    {t('watch')}
+                  <button onClick={triggerAd} disabled={isAdLoading} className="bg-pink-500 text-white font-extrabold py-2.5 px-5 rounded-xl border-b-[3px] border-pink-700 active:border-b-0 active:translate-y-[3px] transition-all text-sm shrink-0 disabled:opacity-80 flex items-center justify-center min-w-[80px]">
+                    {isAdLoading ? <Loader2 className="w-4 h-4 animate-spin my-0.5 mx-2" /> : t('watch')}
                   </button>
                 )}
               </div>
@@ -1582,13 +1597,25 @@ export default function App() {
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="text-center mb-6 z-10 w-full pt-4">
+              <div className="text-center mb-6 z-10 w-full pt-4 flex flex-col items-center">
                 <h3 className="text-2xl font-black text-white mb-1 flex items-center justify-center">
                   <Sparkles className="w-6 h-6 mr-3 text-purple-400" /> {t('luckyWheel')}
                 </h3>
-                <div className="bg-slate-800/60 rounded-xl py-2 px-4 shadow-inner border border-slate-700/50 inline-flex items-center text-xs font-black uppercase tracking-wider text-slate-400">
-                  <RefreshCw className={`w-3.5 h-3.5 mr-2 text-cyan-400 ${isSpinning ? 'animate-spin' : ''}`} />
-                  {lastWheelDate !== new Date().toDateString() ? t('freeSpin') : `${t('adSpin')} (${adSpinsCount}/3)`}
+                <div className="bg-slate-800/60 rounded-xl py-2 px-4 shadow-inner border border-slate-700/50 flex flex-col items-center justify-center min-w-[200px]">
+                  <div className="flex items-center text-xs font-black uppercase tracking-wider text-slate-200">
+                    <RefreshCw className={`w-3.5 h-3.5 mr-2 text-cyan-400 ${isSpinning ? 'animate-spin' : ''}`} />
+                    {lastWheelDate !== new Date().toDateString() ? (
+                      <span className="text-emerald-400">{t('freeSpin') || 'Free Spin'}</span>
+                    ) : (
+                      <span className="text-slate-400">{t('adSpin') || 'Ad Spin'} ({adSpinsCount})</span>
+                    )}
+                  </div>
+                  
+                  {lastWheelDate === new Date().toDateString() && (
+                    <div className="flex items-center mt-2 text-[10px] font-bold text-pink-400 uppercase tracking-widest bg-pink-500/10 px-2.5 py-1 rounded-md border border-pink-500/20 w-fit shrink-0">
+                      <Clock className="w-3 h-3 mr-1.5" /> Next free in: <span className="font-mono ml-1">{timeToReset}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
