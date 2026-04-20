@@ -292,11 +292,6 @@ export default function App() {
   const [isGameOpen, setIsGameOpen] = useState(false);
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   const [isWheelOpen, setIsWheelOpen] = useState(false);
-  const [lastWheelDate, setLastWheelDate] = useState('');
-  const [lastWheelAdDate, setLastWheelAdDate] = useState('');
-  const [wheelAdsWatched, setWheelAdsWatched] = useState(0);
-  const [adSpinsCount, setAdSpinsCount] = useState(0);
-  const [adsWatched, setAdsWatched] = useState(0);
   const [isAdLoading, setIsAdLoading] = useState(false);
 
   // Notifications State
