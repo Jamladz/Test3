@@ -223,6 +223,7 @@ export default function App() {
     setLastWheelDate(today);
     return selected;
   };
+  const [adTasks, setAdTasks] = useState([
     { id: 'miniapp_gamee', title: 'Play Gamee Mini App', reward: 100, link: 'https://t.me/gamee/start?startapp=eyJyZWYiOjEzNjg4OTk4NDJ9', type: 'telegram' },
     { id: 'yt_whiteboard', title: 'Sub Whiteboard Crypto', reward: 50, link: 'https://youtube.com/@whiteboardcrypto?si=EqK3R0Ch_fXhKTYK', type: 'youtube' },
     { id: 'yt_coincodex', title: 'Sub CoinCodex', reward: 50, link: 'https://youtube.com/@coincodex?si=afSZv7q0xW-h7b7u', type: 'youtube' },
