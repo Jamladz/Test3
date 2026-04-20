@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+import firebaseRulesPlugin from '@firebase/eslint-plugin-security-rules';
 
 export default tseslint.config(
   { ignores: ['dist'] },
@@ -18,5 +19,6 @@ export default tseslint.config(
       'prefer-const': 'off',
       'no-empty': 'off',
     },
-  }
+  },
+  firebaseRulesPlugin.configs['flat/recommended']
 );

@@ -2,20 +2,29 @@
   "entities": {
     "User": {
       "title": "User",
-      "description": "A user profile in the Telegram Mini App",
+      "description": "Represents a Telegram Mini App user.",
       "type": "object",
       "properties": {
-        "userId": { "type": "string" },
-        "points": { "type": "number" },
-        "referralsCount": { "type": "number" },
+        "userId": { "type": "string", "description": "Telegram user ID." },
+        "authUid": { "type": "string", "description": "Firebase Auth UID." },
+        "points": { "type": "integer" },
+        "tonBalance": { "type": "number" },
+        "referralsCount": { "type": "integer" },
         "invitedBy": { "type": ["string", "null"] },
-        "createdAt": { "type": "string" }
+        "createdAt": { "type": "string" },
+        "completedTasks": { "type": "array", "items": { "type": "string" } },
+        "lastAdDate": { "type": "string" },
+        "adsWatched": { "type": "integer" },
+        "lastWheelDate": { "type": "string" },
+        "lastWheelAdDate": { "type": "string" },
+        "wheelAdsWatched": { "type": "integer" },
+        "adSpinsCount": { "type": "integer" }
       },
-      "required": ["userId", "points", "referralsCount", "createdAt"]
+      "required": ["userId", "authUid", "points", "tonBalance", "referralsCount", "createdAt"]
     },
     "Referral": {
       "title": "Referral",
-      "description": "Records that a user was invited by an inviter",
+      "description": "Represents a referral relationship.",
       "type": "object",
       "properties": {
         "inviterId": { "type": "string" },
@@ -27,12 +36,12 @@
   },
   "firestore": {
     "/users/{userId}": {
-      "schema": { "$ref": "#/entities/User" },
-      "description": "User profiles indexed by their Telegram ID"
+      "schema": "User",
+      "description": "Stores user profiles."
     },
     "/referrals/{referralId}": {
-      "schema": { "$ref": "#/entities/Referral" },
-      "description": "Referral logs indexed by inviterId_invitedId"
+      "schema": "Referral",
+      "description": "Stores successful referrals."
     }
   }
 }

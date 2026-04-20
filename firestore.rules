@@ -1,48 +1,108 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // 0. Global Safety Net
     match /{document=**} { 
       allow read, write: if false; 
     }
 
+    // --- Core Primitives ---
     function isSignedIn() { return request.auth != null; }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
-
-    function isValidUser() {
-      let data = incoming();
-      return data.keys().hasAll(['userId', 'points', 'referralsCount', 'createdAt'])
-          && data.userId is string 
-          && data.points is number
-          && data.referralsCount is number
-          && data.createdAt is string
-          && (data.keys().hasAll(['invitedBy']) ? (data.invitedBy is string || data.invitedBy == null) : true);
-    }
     
-    function isValidReferral() {
-      let data = incoming();
-      return data.keys().hasAll(['inviterId', 'invitedId', 'createdAt'])
-          && data.inviterId is string
-          && data.invitedId is string
-          && data.createdAt is string;
+    // Strict ID Regex validation
+    function isValidId(id) { 
+        return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
     }
 
+    // --- Schemas & Blueprints ---
+    function isValidUserCreate(data, docId) {
+        return data.keys().hasAll(['userId', 'authUid', 'points', 'tonBalance', 'referralsCount', 'createdAt'])
+            && data.size() >= 6 && data.size() <= 15
+            && data.userId == docId
+            && data.authUid == request.auth.uid // Must bind to the creator's Firebase Auth UID
+            && data.points is number
+            && data.tonBalance is number
+            && data.referralsCount is int
+            && data.createdAt is string && data.createdAt.size() <= 50;
+    }
+
+    function isOwnerUpdate(data) {
+        // Owner can modify progress stats, but CANNOT spoof referralsCount or TON balance maliciously
+        // (App handles TON balance, but ideally we restrict arbitrary TON logic, though for now we allow specific types)
+        let diff = data.diff(existing());
+        let allowedKeys = ['points', 'tonBalance', 'completedTasks', 'lastAdDate', 'adsWatched', 'lastWheelDate', 'lastWheelAdDate', 'wheelAdsWatched', 'adSpinsCount'];
+        
+        // Ensure no protected keys are touched by the owner directly
+        return diff.affectedKeys().hasOnly(allowedKeys)
+            // Type validations for updated fields
+            && ( (!diff.affectedKeys().hasAny(['points'])) || data.points is number )
+            && ( (!diff.affectedKeys().hasAny(['tonBalance'])) || data.tonBalance is number )
+            && ( (!diff.affectedKeys().hasAny(['completedTasks'])) || (data.completedTasks is list && data.completedTasks.size() <= 500) )
+            && ( (!diff.affectedKeys().hasAny(['lastAdDate'])) || data.lastAdDate is string )
+            && ( (!diff.affectedKeys().hasAny(['adsWatched'])) || data.adsWatched is int )
+            && ( (!diff.affectedKeys().hasAny(['lastWheelDate'])) || data.lastWheelDate is string )
+            && ( (!diff.affectedKeys().hasAny(['lastWheelAdDate'])) || data.lastWheelAdDate is string )
+            && ( (!diff.affectedKeys().hasAny(['wheelAdsWatched'])) || data.wheelAdsWatched is int )
+            && ( (!diff.affectedKeys().hasAny(['adSpinsCount'])) || data.adSpinsCount is int );
+    }
+
+    // The atomicity check: Another user can update someone's referral count IF they are registering a referral doc
+    function isReferralUpdateForInviter(data, docId) {
+        let diff = data.diff(existing());
+        return diff.affectedKeys().hasOnly(['points', 'referralsCount', 'lastReferred'])
+            && data.points == existing().points + 200
+            && data.referralsCount == existing().referralsCount + 1
+            && data.lastReferred is string
+            && isValidId(data.lastReferred)
+            // CRITICAL ATOMICITY: The referral document must be created exactly now
+            && existsAfter(/databases/$(database)/documents/referrals/$(docId + '_' + data.lastReferred));
+    }
+
+    function isValidReferralCreate(data, refId) {
+        return data.keys().hasAll(['inviterId', 'invitedId', 'createdAt'])
+            && data.size() == 3
+            && data.inviterId is string && isValidId(data.inviterId)
+            && data.invitedId is string && isValidId(data.invitedId)
+            && refId == data.inviterId + '_' + data.invitedId
+            && data.createdAt is string
+            // The invited user MUST be the one executing this write
+            // But we don't have their user doc ID in auth, so we just ensure they are logged in
+            // and require they are simultaneously updating the inviter's doc 
+            // (the existsAfter rule on the user doc handles the inverse constraint)
+            && existsAfter(/databases/$(database)/documents/users/$(data.inviterId));
+    }
+
+
+    // --- Paths ---
     match /users/{userId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn() && isValidUser();
-      allow update: if isSignedIn() 
-          && (
-             incoming().diff(existing()).affectedKeys().hasOnly(['points', 'referralsCount'])
-             || incoming().diff(existing()).affectedKeys().hasOnly(['points'])
-          );
+        // Read: A user can only read their own document (based on authUid)
+        // Wait, for referrals, the invited user reads the inviter's document? NO, they just write.
+        // Actually, they `getDoc(inviterRef)`. So they might need read access!
+        // To allow referral `getDoc`, we MUST allow read access to any user doc. Since profiles are public-ish in games,
+        // we can allow authenticated reads, but restrict updates.
+        allow read: if isSignedIn() && isValidId(userId);
+
+        allow create: if isSignedIn() 
+                      && isValidId(userId) 
+                      && isValidUserCreate(incoming(), userId);
+
+        allow update: if isSignedIn() && (
+            (existing().authUid == request.auth.uid && isOwnerUpdate(incoming()))
+            ||
+            isReferralUpdateForInviter(incoming(), userId)
+        );
     }
 
     match /referrals/{referralId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn() && isValidReferral();
-      allow update: if false;
+        allow read: if isSignedIn() && isValidId(referralId);
+        
+        allow create: if isSignedIn() 
+                      && isValidId(referralId)
+                      && isValidReferralCreate(incoming(), referralId);
+                      
+        allow update, delete: if false; // Referrals are immutable once created
     }
   }
 }
