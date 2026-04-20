@@ -557,66 +557,88 @@ export default function App() {
     }
   };
 
-  const spinWheel = () => {
+  const spinWheel = async () => {
+    // 1. Fetch latest state from server to prevent bypassing limits
+    const userRef = doc(db, 'users', String(userId));
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) return;
+    
+    const data = userSnap.data();
+    const today = new Date().toDateString();
+    const lastFreeDate = data.lastWheelDate || '';
+    const adSpins = data.adSpinsCount || 0;
+
+    const canFree = lastFreeDate !== today;
+    const canAd = adSpins > 0;
+
+    if (!canFree && !canAd) {
+      showMessage("No Spins Left", "Please watch ads or wait until tomorrow.");
+      return;
+    }
+
+    // 2. Perform Reward Logic
     const rewards = [
       { id: 0, label: '5 XP', type: 'xp', value: 5, weight: 40 },
       { id: 1, label: '10 XP', type: 'xp', value: 10, weight: 30 },
       { id: 2, label: '15 XP', type: 'xp', value: 15, weight: 20 },
       { id: 3, label: '0.005 TON', type: 'ton', value: 0.005, weight: 10 },
-      { id: 4, label: '50 XP', type: 'xp', value: 50, weight: 0 },
-      { id: 5, label: '1000 XP', type: 'xp', value: 1000, weight: 0 },
-      { id: 6, label: '1 TON', type: 'ton', value: 1, weight: 0 },
-      { id: 7, label: '15 TON', type: 'ton', value: 15, weight: 0 },
     ];
 
-    const today = new Date().toDateString();
-    const canFree = lastWheelDate !== today;
-    const canAd = adSpinsCount > 0;
-
-    if (!canFree && !canAd) return;
-
-    // Use free spin first
-    if (canFree) {
-      setLastWheelDate(today);
-      pushUserData({ lastWheelDate: today });
-    } else {
-      setAdSpinsCount(prev => prev - 1);
-      pushUserData({ adSpinsCount: adSpinsCount - 1 });
-    }
-
-    // Weighted random
     const totalWeight = rewards.reduce((acc, r) => acc + r.weight, 0);
     let random = Math.random() * totalWeight;
-    let selected: any = rewards[0];
-    
+    let selected = rewards[0];
     for (const r of rewards) {
-      if (random < r.weight) {
-        selected = r;
-        break;
-      }
+      if (random < r.weight) { selected = r; break; }
       random -= r.weight;
     }
 
+    // 3. Atomically update state and rewards on Firestore
+    const updatePayload: any = {};
+    if (canFree) {
+       updatePayload.lastWheelDate = today;
+    } else {
+       updatePayload.adSpinsCount = increment(-1);
+       setAdSpinsCount(prev => prev - 1);
+    }
+    
+    if (selected.type === 'xp') {
+       updatePayload.points = increment(selected.value);
+       setPoints(p => p + selected.value);
+    } else {
+       updatePayload.tonBalance = increment(selected.value);
+       setTonBalance(p => p + selected.value);
+    }
+
+    await updateDoc(userRef, updatePayload);
+    
     return selected;
   };
 
-  const claimAdReward = () => {
+  const claimAdReward = async () => {
     const today = new Date().toDateString();
-    const currentWatched = lastAdDate === today ? adsWatched : 0;
+    // Verify server-side state before claiming
+    const userRef = doc(db, 'users', String(userId));
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) return;
     
-    if (currentWatched === WATCH_LIMIT) {
-      const newWatched = WATCH_LIMIT + 1; // Mark as claimed
-      setAdsWatched(newWatched);
-      setPoints((p: number) => p + XP_REWARD_AFTER_3);
+    const data = userSnap.data();
+    const currentWatched = data.lastAdDate === today ? (data.adsWatched || 0) : 0;
+    
+    // Check if limit reached and not yet claimed (assuming adsWatched > 3 means claimed for today)
+    if (currentWatched >= WATCH_LIMIT && (data.adsWatchedClaimed !== today)) {
       
-      if (auth.currentUser) {
-        updateDoc(doc(db, 'users', String(userId)), { 
-           points: increment(XP_REWARD_AFTER_3),
-           adsWatched: newWatched // Hard set to prevent multiple claims executing increment logic
-        }).catch(e => console.error(e?.message || String(e)));
-      }
+      // Update points and mark as claimed for today
+      await updateDoc(userRef, { 
+         points: increment(XP_REWARD_AFTER_3),
+         adsWatchedClaimed: today // Specifically mark this day as claimed
+      });
+      
+      setPoints(p => p + XP_REWARD_AFTER_3);
+      setAdsWatched(prev => prev + 1); // Increment just to signal completion locally
       
       try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
+    } else if (currentWatched >= WATCH_LIMIT) {
+       showMessage("Already Claimed", "You have already claimed your daily reward.");
     }
   };
 
