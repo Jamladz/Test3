@@ -456,22 +456,36 @@ export default function App() {
     if (Adsgram) {
       setIsAdLoading(true);
       try {
+        // Fetch latest data to verify limit from server side
+        const userRef = doc(db, 'users', String(userId));
+        const userSnap = await getDoc(userRef);
+        
+        let currentWatched = 0;
+        if (userSnap.exists()) {
+           const data = userSnap.data();
+           const today = new Date().toDateString();
+           currentWatched = data.lastAdDate === today ? (data.adsWatched || 0) : 0;
+        }
+
+        if (currentWatched >= WATCH_LIMIT) {
+           showMessage(t('limitReached'), t('maxDailyAdsReached'));
+           setIsAdLoading(false);
+           return;
+        }
+
         const AdController = Adsgram.init({ blockId: ADS_WATCH_ID });
         await AdController.show();
         
         const today = new Date().toDateString();
-        // Compute actual watch state reliably derived from dates
-        const currentWatched = lastAdDate === today ? adsWatched : 0;
         
-        if (currentWatched < WATCH_LIMIT) {
-           const newWatched = currentWatched + 1;
-           setLastAdDate(today);
-           setAdsWatched(newWatched);
-           // Hard set the value to perfectly sync state, avoid increment() over unknown state.
-           pushUserData({ lastAdDate: today, adsWatched: newWatched });
-        } else {
-           pushUserData({ lastAdDate: today });
-        }
+        await updateDoc(userRef, {
+           lastAdDate: today,
+           adsWatched: increment(1)
+        });
+        
+        setAdsWatched(prev => prev >= 0 && lastAdDate === today ? prev + 1 : 1);
+        setLastAdDate(today);
+
         try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
         setIsAdLoading(false);
       } catch (e: any) {
@@ -495,10 +509,16 @@ export default function App() {
   const triggerWheelAd = async () => {
     if (isAdLoading) return;
     
-    // STRICT Anti-farm limitation for wheel ads (3 per day max allowed)
-    const today = new Date().toDateString();
-    const currentWatches = lastWheelAdDate === today ? wheelAdsWatched : 0;
-    
+    // Fetch latest data to verify limit from server side
+    const userRef = doc(db, 'users', String(userId));
+    const userSnap = await getDoc(userRef);
+    let currentWatches = 0;
+    if (userSnap.exists()) {
+       const data = userSnap.data();
+       const today = new Date().toDateString();
+       currentWatches = data.lastWheelAdDate === today ? (data.wheelAdsWatched || 0) : 0;
+    }
+
     if (currentWatches >= 3) {
       showMessage("Limit Reached", "You have already watched the maximum 3 daily wheel ads today.");
       return;
@@ -511,44 +531,29 @@ export default function App() {
         const AdController = Adsgram.init({ blockId: ADS_WHEEL_ID });
         await AdController.show();
         
-        const newWatched = currentWatches + 1;
-        setLastWheelAdDate(today);
-        setWheelAdsWatched(newWatched);
-        setAdSpinsCount(prev => prev + 1);
+        const today = new Date().toDateString();
         
-        pushUserData({
+        await updateDoc(userRef, {
            lastWheelAdDate: today,
-           wheelAdsWatched: newWatched, // absolute set to completely override old days' value securely
+           wheelAdsWatched: increment(1),
            adSpinsCount: increment(1)
         });
+        
+        setLastWheelAdDate(today);
+        setWheelAdsWatched(prev => prev >= 0 && lastWheelAdDate === today ? prev + 1 : 1);
+        setAdSpinsCount(prev => prev + 1);
         
         try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
         setIsAdLoading(false);
         
-        try {
-          if (WebApp.isVersionAtLeast('6.2')) {
-            WebApp.showAlert("+1 Spin Added!");
-          } else {
-            alert("+1 Spin Added!");
-          }
-        } catch (err) {
-          alert("+1 Spin Added!");
-        }
+        alert("+1 Spin Added!");
       } catch (e: any) {
         console.warn("Wheel ad failed", e);
         setIsAdLoading(false);
-        try {
-          if (WebApp.isVersionAtLeast('6.2')) {
-            WebApp.showAlert(t('adError') || "Ad placement failed.");
-          } else {
-            alert(t('adError') || "Ad placement failed.");
-          }
-        } catch (err) {
-          alert("Ad placement failed.");
-        }
+        alert("Ad placement failed.");
       }
     } else {
-      showMessage("Ads Unavailable", "The ad system is currently unavailable. If you are using an ad-blocker, please disable it to spin the wheel.");
+      showMessage("Ads Unavailable", "The ad system is currently unavailable.");
     }
   };
 
