@@ -169,9 +169,10 @@ export default function App() {
   // --- Updated Ad Logic ---
   const triggerAd = async () => {
     const today = new Date().toDateString();
+    
+    // Check 3/3 daily limit using LocalStorage
     if (lastAdClaimDate === today && adsWatched >= WATCH_LIMIT) {
-       showMessage("Limit Reached", "Daily limit reached. Try again tomorrow.");
-       return;
+       return; // Silently do nothing if limit reached
     }
 
     const Adsgram = (window as any).Adsgram;
@@ -181,20 +182,46 @@ export default function App() {
         const AdController = Adsgram.init({ blockId: ADS_WATCH_ID });
         await AdController.show();
         
-        const newWatched = (lastAdDate === today ? adsWatched : 0) + 1;
+        // 24H Cooldown logic: reset if new day, otherwise increment
+        const newWatched = (lastAdClaimDate === today ? adsWatched : 0) + 1;
         setAdsWatched(newWatched);
-        setLastAdDate(today);
+        setLastAdClaimDate(today);
 
         setIsAdLoading(false);
       } catch (e: any) {
         setIsAdLoading(false);
-        // Silently fail to avoid intrusive popups as requested
+      }
+    }
+  };
+
+  const triggerWheelAd = async () => {
+    const today = new Date().toDateString();
+    if (wheelAdsWatched >= 3 && lastWheelDate === today) {
+      return; // Daily limit 3
+    }
+    
+    const Adsgram = (window as any).Adsgram;
+    if (Adsgram) {
+      setIsAdLoading(true);
+      try {
+        const AdController = Adsgram.init({ blockId: ADS_WHEEL_ID });
+        await AdController.show();
+        
+        const newWatched = (lastWheelDate === today ? wheelAdsWatched : 0) + 1;
+        setWheelAdsWatched(newWatched);
+        setLastWheelDate(today);
+        setAdSpinsCount(prev => prev + 1);
+        
+        setIsAdLoading(false);
+      } catch (e: any) {
+        setIsAdLoading(false);
       }
     }
   };
 
   const claimAdReward = () => {
     const today = new Date().toDateString();
+    // Claim 100 XP only if 3/3 and not yet claimed today
     if (adsWatched >= WATCH_LIMIT && lastAdClaimDate !== today) {
       setPoints(p => p + XP_REWARD_AFTER_3);
       setLastAdClaimDate(today);
@@ -202,10 +229,10 @@ export default function App() {
     }
   };
 
-  const spinWheel = () => {
+  const spinWheel = async () => {
     const today = new Date().toDateString();
-    if (lastWheelDate === today) {
-      showMessage("Wait", "You already spun today. Try again tomorrow.");
+    // 24h limit check: 1 free, +3 from ads
+    if (lastWheelDate === today && adSpinsCount <= 0) {
       return;
     }
 
@@ -220,7 +247,10 @@ export default function App() {
     if (selected.type === 'xp') setPoints(p => p + selected.value);
     else setTonBalance(b => b + selected.value);
     
-    setLastWheelDate(today);
+    // Consume spin
+    if (lastWheelDate !== today) setLastWheelDate(today);
+    else setAdSpinsCount(prev => prev - 1);
+    
     return selected;
   };
   const [adTasks, setAdTasks] = useState([
@@ -525,197 +555,6 @@ export default function App() {
   const ADS_WATCH_ID = "int-28074";
   const ADS_WHEEL_ID = "int-28173";
 
-  const triggerAd = async () => {
-    if (isAdLoading) return;
-    const Adsgram = (window as any).Adsgram;
-    if (Adsgram) {
-      setIsAdLoading(true);
-      try {
-        // Fetch latest data to verify limit from server side
-        const userRef = doc(db, 'users', String(userId));
-        const userSnap = await getDoc(userRef);
-        
-        let currentWatched = 0;
-        if (userSnap.exists()) {
-           const data = userSnap.data();
-           const today = new Date().toDateString();
-           currentWatched = data.lastAdDate === today ? (data.adsWatched || 0) : 0;
-        }
-
-        if (currentWatched >= WATCH_LIMIT) {
-           showMessage(t('limitReached'), t('maxDailyAdsReached'));
-           setIsAdLoading(false);
-           return;
-        }
-
-        const AdController = Adsgram.init({ blockId: ADS_WATCH_ID });
-        await AdController.show();
-        
-        const today = new Date().toDateString();
-        
-        await updateDoc(userRef, {
-           lastAdDate: today,
-           adsWatched: increment(1)
-        });
-        
-        setAdsWatched(prev => prev >= 0 && lastAdDate === today ? prev + 1 : 1);
-        setLastAdDate(today);
-
-        try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
-        setIsAdLoading(false);
-      } catch (e: any) {
-        console.warn("Ad skipped or failed", e);
-        setIsAdLoading(false);
-        try {
-          if (WebApp.isVersionAtLeast('6.2')) {
-            WebApp.showAlert(t('adError') || "Ad failed or skipped.");
-          } else {
-            alert(t('adError') || "Ad failed or skipped.");
-          }
-        } catch (err) {
-          alert("Ad failed or skipped.");
-        }
-      }
-    } else {
-      showMessage("Ads Unavailable", "The ad system is currently unavailable. If you are using an ad-blocker, please disable it to earn rewards.");
-    }
-  };
-
-  const triggerWheelAd = async () => {
-    if (isAdLoading) return;
-    
-    // Fetch latest data to verify limit from server side
-    const userRef = doc(db, 'users', String(userId));
-    const userSnap = await getDoc(userRef);
-    let currentWatches = 0;
-    if (userSnap.exists()) {
-       const data = userSnap.data();
-       const today = new Date().toDateString();
-       currentWatches = data.lastWheelAdDate === today ? (data.wheelAdsWatched || 0) : 0;
-    }
-
-    if (currentWatches >= 3) {
-      showMessage("Limit Reached", "You have already watched the maximum 3 daily wheel ads today.");
-      return;
-    }
-
-    const Adsgram = (window as any).Adsgram;
-    if (Adsgram) {
-      setIsAdLoading(true);
-      try {
-        const AdController = Adsgram.init({ blockId: ADS_WHEEL_ID });
-        await AdController.show();
-        
-        const today = new Date().toDateString();
-        
-        await updateDoc(userRef, {
-           lastWheelAdDate: today,
-           wheelAdsWatched: increment(1),
-           adSpinsCount: increment(1)
-        });
-        
-        setLastWheelAdDate(today);
-        setWheelAdsWatched(prev => prev >= 0 && lastWheelAdDate === today ? prev + 1 : 1);
-        setAdSpinsCount(prev => prev + 1);
-        
-        try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
-        setIsAdLoading(false);
-        
-        alert("+1 Spin Added!");
-      } catch (e: any) {
-        console.warn("Wheel ad failed", e);
-        setIsAdLoading(false);
-        alert("Ad placement failed.");
-      }
-    } else {
-      showMessage("Ads Unavailable", "The ad system is currently unavailable.");
-    }
-  };
-
-  const spinWheel = async () => {
-    // 1. Fetch latest state from server to prevent bypassing limits
-    const userRef = doc(db, 'users', String(userId));
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) return;
-    
-    const data = userSnap.data();
-    const today = new Date().toDateString();
-    const lastFreeDate = data.lastWheelDate || '';
-    const adSpins = data.adSpinsCount || 0;
-
-    const canFree = lastFreeDate !== today;
-    const canAd = adSpins > 0;
-
-    if (!canFree && !canAd) {
-      showMessage("No Spins Left", "Please watch ads or wait until tomorrow.");
-      return;
-    }
-
-    // 2. Perform Reward Logic
-    const rewards = [
-      { id: 0, label: '5 XP', type: 'xp', value: 5, weight: 40 },
-      { id: 1, label: '10 XP', type: 'xp', value: 10, weight: 30 },
-      { id: 2, label: '15 XP', type: 'xp', value: 15, weight: 20 },
-      { id: 3, label: '0.005 TON', type: 'ton', value: 0.005, weight: 10 },
-    ];
-
-    const totalWeight = rewards.reduce((acc, r) => acc + r.weight, 0);
-    let random = Math.random() * totalWeight;
-    let selected = rewards[0];
-    for (const r of rewards) {
-      if (random < r.weight) { selected = r; break; }
-      random -= r.weight;
-    }
-
-    // 3. Atomically update state and rewards on Firestore
-    const updatePayload: any = {};
-    if (canFree) {
-       updatePayload.lastWheelDate = today;
-    } else {
-       updatePayload.adSpinsCount = increment(-1);
-       setAdSpinsCount(prev => prev - 1);
-    }
-    
-    if (selected.type === 'xp') {
-       updatePayload.points = increment(selected.value);
-       setPoints(p => p + selected.value);
-    } else {
-       updatePayload.tonBalance = increment(selected.value);
-       setTonBalance(p => p + selected.value);
-    }
-
-    await updateDoc(userRef, updatePayload);
-    
-    return selected;
-  };
-
-  const claimAdReward = async () => {
-    const today = new Date().toDateString();
-    // Verify server-side state before claiming
-    const userRef = doc(db, 'users', String(userId));
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) return;
-    
-    const data = userSnap.data();
-    const currentWatched = data.lastAdDate === today ? (data.adsWatched || 0) : 0;
-    
-    // Check if limit reached and not yet claimed (assuming adsWatched > 3 means claimed for today)
-    if (currentWatched >= WATCH_LIMIT && (data.adsWatchedClaimed !== today)) {
-      
-      // Update points and mark as claimed for today
-      await updateDoc(userRef, { 
-         points: increment(XP_REWARD_AFTER_3),
-         adsWatchedClaimed: today // Specifically mark this day as claimed
-      });
-      
-      setPoints(p => p + XP_REWARD_AFTER_3);
-      setAdsWatched(prev => prev + 1); // Increment just to signal completion locally
-      
-      try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
-    } else if (currentWatched >= WATCH_LIMIT) {
-       showMessage("Already Claimed", "You have already claimed your daily reward.");
-    }
-  };
 
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
