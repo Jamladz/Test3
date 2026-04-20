@@ -263,7 +263,6 @@ export default function App() {
   };
 
   const userId = WebApp.initDataUnsafe?.user?.id || WebApp.initDataUnsafe?.user?.username || getSimulatedUserId();
-  const userName = WebApp.initDataUnsafe?.user?.username || 'user';
   const refLink = `https://t.me/ToNewBot/app?startapp=${userId}`;
   const userWalletAddress = useTonAddress();
   const [tonConnectUI] = useTonConnectUI();
