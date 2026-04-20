@@ -198,7 +198,16 @@ export const AppMiniGame = ({ onClose, onEarn }: { onClose: () => void, onEarn: 
               }
           }
       } else {
-          console.warn("Adsgram not available (Real ads only in Telegram)");
+          const errMsg = "Ad system unavailable. Please disable any ad-blockers to use powerups.";
+          try {
+              if (WebApp.isVersionAtLeast('6.2')) {
+                  WebApp.showAlert(errMsg);
+              } else {
+                  alert(errMsg);
+              }
+          } catch (err) {
+              alert(errMsg);
+          }
       }
   };
 
