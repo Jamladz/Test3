@@ -149,6 +149,7 @@ export default function App() {
   const [pendingTasks, setPendingTasks] = useState<Record<string, number>>({});
   const [lastAdDate, setLastAdDate] = useState<string>('');
   const [adTasks, setAdTasks] = useState([
+    { id: 'miniapp_gamee', title: 'Play Gamee Mini App', reward: 100, link: 'https://t.me/gamee/start?startapp=eyJyZWYiOjEzNjg4OTk4NDJ9', type: 'telegram' },
     { id: 'yt_whiteboard', title: 'Sub Whiteboard Crypto', reward: 50, link: 'https://youtube.com/@whiteboardcrypto?si=EqK3R0Ch_fXhKTYK', type: 'youtube' },
     { id: 'yt_coincodex', title: 'Sub CoinCodex', reward: 50, link: 'https://youtube.com/@coincodex?si=afSZv7q0xW-h7b7u', type: 'youtube' },
     { id: 'yt_cryptogorilla', title: 'Sub Crypto Gorilla', reward: 50, link: 'https://youtube.com/@cryptogorilla?si=BDeFpGKKh9_f5Tt0', type: 'youtube' },
@@ -243,6 +244,7 @@ export default function App() {
   };
 
   const userId = WebApp.initDataUnsafe?.user?.id || WebApp.initDataUnsafe?.user?.username || getSimulatedUserId();
+  const userName = WebApp.initDataUnsafe?.user?.username || 'user';
   const refLink = `https://t.me/ToNewBot/app?startapp=${userId}`;
   const userWalletAddress = useTonAddress();
   const [tonConnectUI] = useTonConnectUI();
@@ -258,9 +260,26 @@ export default function App() {
   };
 
   useEffect(() => {
-    // Load cached tasks state
-    const storedLastAd = localStorage.getItem('tonew_last_ad') || '';
-    const storedAdsProgress = localStorage.getItem('tonew_ads_progress');
+    // Cross-device persistence syncing (Simulated Backend Retrieval via Telegram ID)
+    const syncKeyPrefix = `tonew_cloud_${userId}_`;
+    
+    const loadState = (key: string, defaultValue: any, isJson = false) => {
+       const cloud = localStorage.getItem(syncKeyPrefix + key); // Simulating fetching from DB using userId
+       const local = localStorage.getItem(key);
+       const target = cloud || local; // prefer cloud
+       
+       if (!target && defaultValue !== undefined) return defaultValue;
+       if (!target) return '';
+       
+       if (isJson) {
+         try { return JSON.parse(target); } catch(e) { return defaultValue; }
+       }
+       return target;
+    };
+
+    // Load tasks state (cloud synced)
+    const storedLastAd = loadState('tonew_last_ad', '');
+    const storedAdsProgress = loadState('tonew_ads_progress', '0');
     if (storedLastAd === new Date().toDateString()) {
       setLastAdDate(storedLastAd);
       setAdsWatched(Number(storedAdsProgress) || 0);
@@ -269,27 +288,42 @@ export default function App() {
       setLastAdDate(new Date().toDateString());
     }
     
-    const storedTasksStr = localStorage.getItem('tonew_completed_tasks');
-    if (storedTasksStr) {
-      try {
-        const parsed = JSON.parse(storedTasksStr);
-        if (Array.isArray(parsed)) setCompletedTasks(parsed);
-      } catch(e){}
-    }
+    const parsedTasks = loadState('tonew_completed_tasks', [], true);
+    if (Array.isArray(parsedTasks)) setCompletedTasks(parsedTasks);
 
     // Wheel state
-    const storedLastWheelDate = localStorage.getItem('tonew_last_wheel_date') || '';
-    const storedAdSpins = localStorage.getItem('tonew_wheel_ad_spins') || '0';
+    const storedLastWheelDate = loadState('tonew_last_wheel_date', '');
+    const storedAdSpins = loadState('tonew_wheel_ad_spins', '0');
     setLastWheelDate(storedLastWheelDate);
     setAdSpinsCount(Number(storedAdSpins) || 0);
 
-    const storedCreatedAds = localStorage.getItem('tonew_created_ads');
-    if (storedCreatedAds) {
-      try {
-        const parsed = JSON.parse(storedCreatedAds);
-        if (Array.isArray(parsed)) setCreatedAds(parsed);
-      } catch(e){}
+    const parsedAds = loadState('tonew_created_ads', [], true);
+    if (Array.isArray(parsedAds)) setCreatedAds(parsedAds);
+    
+    // Referral state sync
+    const startParam = WebApp.initDataUnsafe?.start_param;
+    const isReturning = loadState('tonew_is_returning', 'false');
+    
+    // If it's a new user and they have a start param matching another ID, credit the referrer
+    if (startParam && startParam !== String(userId) && isReturning === 'false') {
+       /* In a real DB, you'd increment the referrer's count here: DB.updateReferrals(startParam, +1) */
     }
+    
+    // Simulate current user's refs. If DB is empty, maybe default to 0. (Load from 'cloud' localstorage in our mock backend)
+    const storedRefs = loadState('tonew_referrals', '0');
+    setReferralsCount(Number(storedRefs));
+    localStorage.setItem(syncKeyPrefix + 'tonew_is_returning', 'true');
+    localStorage.setItem('tonew_is_returning', 'true');
+
+
+    // Wrapper to ensure future logic writes to our "simulated cloud" backend
+    const _setItemOriginal = localStorage.setItem.bind(localStorage);
+    localStorage.setItem = (key, val) => {
+      _setItemOriginal(key, val);
+      if (key.startsWith('tonew_') && !key.startsWith('tonew_cloud_')) {
+        _setItemOriginal(`tonew_cloud_${userId}_${key}`, val);
+      }
+    };
     
     // Initialize Web App
     WebApp.ready();
@@ -1489,7 +1523,7 @@ export default function App() {
       {/* Global Message Modal / Popup Replacement */}
       <AnimatePresence>
         {appModal.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm w-full max-w-[100vw] overflow-hidden">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 w-full max-w-[100vw] overflow-hidden" style={{ backgroundColor: 'rgba(15, 23, 42, 0.95)' }}>
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
