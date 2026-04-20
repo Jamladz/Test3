@@ -645,10 +645,10 @@ export default function App() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
 
-  const handleStartSpin = () => {
+  const handleStartSpin = async () => {
     if (isSpinning) return;
     
-    const result = spinWheel();
+    const result = await spinWheel();
     if (!result) {
       if (adSpinsCount === 0) {
         const confirmMsg = "You used your daily free spin. Want to spin again by watching an ad?";
