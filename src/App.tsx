@@ -149,11 +149,9 @@ export default function App() {
   const [pendingTasks, setPendingTasks] = useState<Record<string, number>>({});
   const [lastAdDate, setLastAdDate] = useState<string>('');
   const [adTasks, setAdTasks] = useState([
-    { id: 'ig1', title: 'Follow Law with Sarah', reward: 50, link: 'https://www.instagram.com/law_with_sarah?igsh=eDlqOW50MW95YjNq', type: 'instagram' },
-    { id: 'ig2', title: 'Follow n68g9bg8ic', reward: 50, link: 'https://www.instagram.com/n68g9bg8ic?igsh=Y29wM3BqMDA4aDQ=', type: 'instagram' },
-    { id: 'ig3', title: 'Follow Abiir', reward: 50, link: 'https://www.instagram.com/abiir438?igsh=MXVjMWkweW0xcmRrNw==', type: 'instagram' },
-    { id: 'ig4', title: 'Follow Irina Lorak', reward: 50, link: 'https://www.instagram.com/lorak.irina?igsh=MXdtbzl3aHIxN3Bzcw==', type: 'instagram' },
-    { id: 'ig5', title: 'Follow Oumaymma', reward: 50, link: 'https://www.instagram.com/oumaymma.90?igsh=MWhpcnpvc2lhMHp6bw==', type: 'instagram' },
+    { id: 'yt_whiteboard', title: 'Sub Whiteboard Crypto', reward: 50, link: 'https://youtube.com/@whiteboardcrypto?si=EqK3R0Ch_fXhKTYK', type: 'youtube' },
+    { id: 'yt_coincodex', title: 'Sub CoinCodex', reward: 50, link: 'https://youtube.com/@coincodex?si=afSZv7q0xW-h7b7u', type: 'youtube' },
+    { id: 'yt_cryptogorilla', title: 'Sub Crypto Gorilla', reward: 50, link: 'https://youtube.com/@cryptogorilla?si=BDeFpGKKh9_f5Tt0', type: 'youtube' },
     { id: 'tk1', title: 'Follow Crypto Masun', reward: 50, link: 'https://www.tiktok.com/@cryptomasun?_r=1&_t=ZN-95g0IJeYC9e', type: 'tiktok' },
     { id: 'tk2', title: 'Follow Roccos Crypto', reward: 50, link: 'https://www.tiktok.com/@roccoscrpto?_r=1&_t=ZN-95g0HSc5gEI', type: 'tiktok' },
     { id: 'yt1', title: 'Sub Crypto Master', reward: 50, link: 'https://youtube.com/@cryptomaster7452?si=wf_FY_zvTeLfcrks', type: 'youtube' },
@@ -780,14 +778,12 @@ export default function App() {
         
         WebApp.HapticFeedback.notificationOccurred('success');
       } catch (error: any) {
-        // Specifically look for user rejection errors to fail silently without alarming console errors or popups
-        const errorMessage = typeof error === 'string' ? error : error?.message || '';
-        if (errorMessage.includes('reject') || errorMessage.includes('decline') || error?.name?.includes('UserRejectsError')) {
-           // Do nothing, fail silently as the user intentionally cancelled
-        } else {
-           console.error("Payment error:", error?.message || String(error));
-           showMessage('Payment Failed', 'An error occurred with the transaction. Please try again.');
-        }
+        // As requested: block annoying messages and popups if user didn't complete payment or something else happened
+        console.warn("Payment interrupted or failed silently:", error?.message || String(error));
+        // We removed showMessage('Payment Failed', ...) to prevent annoying popups
+        try {
+          WebApp.HapticFeedback.notificationOccurred('error');
+        } catch(e) {}
       }
     } else {
         showMessage('Error', 'Please fill all fields.');
