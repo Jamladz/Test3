@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { AppLoadingScreen } from './components/AppLoadingScreen';
 import { AppMiniGame } from './components/AppMiniGame';
 import { auth, db, signInAnonymous } from './firebase';
-import { doc, getDoc, setDoc, updateDoc, increment, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, increment, onSnapshot, writeBatch, arrayUnion } from 'firebase/firestore';
 
 // FEED names instead of Bots
 const MOCK_NAMES = [
@@ -188,6 +188,8 @@ export default function App() {
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   const [isWheelOpen, setIsWheelOpen] = useState(false);
   const [lastWheelDate, setLastWheelDate] = useState('');
+  const [lastWheelAdDate, setLastWheelAdDate] = useState('');
+  const [wheelAdsWatched, setWheelAdsWatched] = useState(0);
   const [adSpinsCount, setAdSpinsCount] = useState(0);
   const [adsWatched, setAdsWatched] = useState(0);
   const [isAdLoading, setIsAdLoading] = useState(false);
@@ -229,6 +231,23 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
   const [timeToReset, setTimeToReset] = useState<string>('');
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const nextMidnightUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
+      const diff = nextMidnightUTC.getTime() - now.getTime();
+      
+      const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const m = Math.floor((diff / 1000 / 60) % 60);
+      const s = Math.floor((diff / 1000) % 60);
+      setTimeToReset(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
+    };
+    
+    updateCountdown(); // Run immediately
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Referral state
   const [referralsCount, setReferralsCount] = useState(0);
@@ -297,6 +316,16 @@ export default function App() {
     setLastWheelDate(storedLastWheelDate);
     setAdSpinsCount(Number(storedAdSpins) || 0);
 
+    const storedLastWheelAdDate = loadState('tonew_last_wheel_ad_date', '');
+    const storedWheelAdsWatched = loadState('tonew_wheel_ads_watched', '0');
+    if (storedLastWheelAdDate === new Date().toDateString()) {
+      setLastWheelAdDate(storedLastWheelAdDate);
+      setWheelAdsWatched(Number(storedWheelAdsWatched) || 0);
+    } else {
+      setLastWheelAdDate(new Date().toDateString());
+      setWheelAdsWatched(0);
+    }
+
     const parsedAds = loadState('tonew_created_ads', [], true);
     if (Array.isArray(parsedAds)) setCreatedAds(parsedAds);
     
@@ -317,13 +346,16 @@ export default function App() {
 
 
     // Wrapper to ensure future logic writes to our "simulated cloud" backend
-    const _setItemOriginal = localStorage.setItem.bind(localStorage);
-    localStorage.setItem = (key, val) => {
-      _setItemOriginal(key, val);
-      if (key.startsWith('tonew_') && !key.startsWith('tonew_cloud_')) {
-        _setItemOriginal(`tonew_cloud_${userId}_${key}`, val);
-      }
-    };
+    if (!(localStorage as any)._hooked) {
+      const _setItemOriginal = localStorage.setItem.bind(localStorage);
+      localStorage.setItem = (key, val) => {
+        _setItemOriginal(key, val);
+        if (key.startsWith('tonew_') && !key.startsWith('tonew_cloud_')) {
+          _setItemOriginal(`tonew_cloud_${userId}_${key}`, val);
+        }
+      };
+      (localStorage as any)._hooked = true;
+    }
     
     // Initialize Web App
     WebApp.ready();
@@ -349,50 +381,77 @@ export default function App() {
       const startParam = WebApp.initDataUnsafe?.start_param || urlParams.get('tgWebAppStartParam') || urlParams.get('startapp');
       const inviterId = startParam ? String(startParam) : null;
 
-      // Handle referral (We process referral if inviter exists AND inviter is not self AND referral doc hasn't been created)
+      // Handle referral securely with an atomic batch
       if (inviterId && inviterId !== tId) {
         const referralRef = doc(db, 'referrals', `${inviterId}_${tId}`);
         const referralSnap = await getDoc(referralRef);
         
-        // Only trigger referral bonus once
         if (!referralSnap.exists()) {
            try {
-            const inviterRef = doc(db, 'users', inviterId);
-             // Give both parties points safely
-            await setDoc(referralRef, {
-              inviterId: inviterId,
-              invitedId: tId,
-              createdAt: new Date().toISOString()
-            });
+             const batch = writeBatch(db);
+             const inviterRef = doc(db, 'users', inviterId);
+             
+             // 1. Create referral doc marker
+             batch.set(referralRef, {
+               inviterId: inviterId,
+               invitedId: tId,
+               createdAt: new Date().toISOString()
+             });
 
-            await updateDoc(inviterRef, {
-              points: increment(200),
-              referralsCount: increment(1)
-            });
+             // 2. Give inviter +200 XP and +1 referral count
+             batch.update(inviterRef, {
+               points: increment(200),
+               referralsCount: increment(1),
+               lastReferred: tId
+             });
 
-            // Update local user's points (if their doc exists, update it, else wait for creation)
-            if (userSnap.exists()) {
-               await updateDoc(userRef, { points: increment(200) });
-            }
-            if (WebApp.isVersionAtLeast('6.2')) {
-              WebApp.showAlert(t('refWelcome') || 'Welcome via referral! You received +200 XP.');
-            } else {
-              showMessage('Referral', t('refWelcome') || 'Welcome via referral! You received +200 XP.');
-            }
+             // 3. Give local user +200 XP and create document if missing, or update if exists
+             const localPointsBonus = 500; // New user gets 500 starting bonus from referral
+             if (!userSnap.exists()) {
+               batch.set(userRef, {
+                 userId: tId,
+                 authUid: auth.currentUser?.uid || '',
+                 points: localPointsBonus,
+                 tonBalance: 0,
+                 referralsCount: 0,
+                 invitedBy: inviterId,
+                 createdAt: new Date().toISOString()
+               });
+             } else {
+               batch.update(userRef, { points: increment(200) });
+             }
+
+             await batch.commit();
+
+             if (WebApp.isVersionAtLeast('6.2')) {
+               WebApp.showAlert(t('refWelcome') || 'Welcome via referral! You received +XP.');
+             } else {
+               showMessage('Referral', t('refWelcome') || 'Welcome via referral! You received +XP.');
+             }
            } catch (e: any) {
-             console.error("Referral process error", e?.message || String(e));
+             console.error("Referral batch error", e?.message || String(e));
            }
+        } else if (!userSnap.exists()) {
+           // Referral already existed but user didn't exist? Just create the user.
+           await setDoc(userRef, {
+             userId: tId,
+             authUid: auth.currentUser?.uid || '',
+             points: 0,
+             tonBalance: 0,
+             referralsCount: 0,
+             invitedBy: null,
+             createdAt: new Date().toISOString()
+           });
         }
-      }
-
-      if (!userSnap.exists()) {
-        // Create new user document
+      } else if (!userSnap.exists()) {
+        // No referral, just normal user creation
         await setDoc(userRef, {
           userId: tId,
-          points: (inviterId && inviterId !== tId) ? 500 : 0, // start with 500 if referred
+          authUid: auth.currentUser?.uid || '',
+          points: 0,
           tonBalance: 0,
           referralsCount: 0,
-          invitedBy: (inviterId && inviterId !== tId) ? inviterId : null,
+          invitedBy: null,
           createdAt: new Date().toISOString()
         });
       }
@@ -404,6 +463,15 @@ export default function App() {
           setPoints(data.points || 0);
           setTonBalance(data.tonBalance || 0);
           setReferralsCount(data.referralsCount || 0);
+          
+          if (data.completedTasks) setCompletedTasks(data.completedTasks);
+          if (data.lastAdDate) setLastAdDate(data.lastAdDate);
+          if (data.adsWatched !== undefined) setAdsWatched(data.adsWatched);
+          
+          if (data.lastWheelDate) setLastWheelDate(data.lastWheelDate);
+          if (data.lastWheelAdDate) setLastWheelAdDate(data.lastWheelAdDate);
+          if (data.wheelAdsWatched !== undefined) setWheelAdsWatched(data.wheelAdsWatched);
+          if (data.adSpinsCount !== undefined) setAdSpinsCount(data.adSpinsCount);
         }
       });
     };
@@ -448,6 +516,12 @@ export default function App() {
     return () => clearInterval(int);
   }, []);
 
+  const pushUserData = (updates: any) => {
+    if (auth.currentUser) {
+      updateDoc(doc(db, 'users', String(userId)), updates).catch(e => console.warn("Failed to push user data", e));
+    }
+  };
+
   const changeLanguage = (lng: string) => i18n.changeLanguage(lng);
 
   const WATCH_LIMIT = 3;
@@ -469,13 +543,14 @@ export default function App() {
         if (lastAdDate !== today) {
            currentWatched = 0;
            setLastAdDate(today);
-           localStorage.setItem('tonew_last_ad', today);
         }
         
         if (currentWatched < WATCH_LIMIT) {
            const newWatched = currentWatched + 1;
            setAdsWatched(newWatched);
-           localStorage.setItem('tonew_ads_progress', newWatched.toString());
+           pushUserData({ lastAdDate: today, adsWatched: increment(1) });
+        } else {
+           pushUserData({ lastAdDate: today });
         }
         try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
         setIsAdLoading(false);
@@ -499,6 +574,21 @@ export default function App() {
 
   const triggerWheelAd = async () => {
     if (isAdLoading) return;
+    
+    // STRICT Anti-farm limitation for wheel ads (3 per day max allowed)
+    const today = new Date().toDateString();
+    let currentWatches = wheelAdsWatched;
+    if (lastWheelAdDate !== today) {
+       currentWatches = 0;
+       setLastWheelAdDate(today);
+       localStorage.setItem('tonew_last_wheel_ad_date', today);
+    }
+    
+    if (currentWatches >= 3) {
+      showMessage("Limit Reached", "You have already watched the maximum 3 daily wheel ads today.");
+      return;
+    }
+
     const Adsgram = (window as any).Adsgram;
     if (Adsgram) {
       setIsAdLoading(true);
@@ -506,8 +596,17 @@ export default function App() {
         const AdController = Adsgram.init({ blockId: ADS_WHEEL_ID });
         await AdController.show();
         
+        const newWatched = currentWatches + 1;
+        setWheelAdsWatched(newWatched);
+        
         setAdSpinsCount(prev => prev + 1);
-        localStorage.setItem('tonew_wheel_ad_spins', (adSpinsCount + 1).toString());
+        
+        pushUserData({
+           lastWheelAdDate: today,
+           wheelAdsWatched: increment(1),
+           adSpinsCount: increment(1)
+        });
+        
         try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
         setIsAdLoading(false);
         
@@ -559,10 +658,10 @@ export default function App() {
     // Use free spin first
     if (canFree) {
       setLastWheelDate(today);
-      localStorage.setItem('tonew_last_wheel_date', today);
+      pushUserData({ lastWheelDate: today });
     } else {
       setAdSpinsCount(prev => prev - 1);
-      localStorage.setItem('tonew_wheel_ad_spins', (adSpinsCount - 1).toString());
+      pushUserData({ adSpinsCount: adSpinsCount - 1 });
     }
 
     // Weighted random
@@ -583,15 +682,18 @@ export default function App() {
 
   const claimAdReward = () => {
     if (adsWatched === WATCH_LIMIT) {
+      const newWatched = WATCH_LIMIT + 1; // Mark as claimed
+      setAdsWatched(newWatched);
+      
       if (auth.currentUser) {
-        updateDoc(doc(db, 'users', String(userId)), { points: increment(XP_REWARD_AFTER_3) }).catch(e => console.error(e?.message || String(e)));
+        updateDoc(doc(db, 'users', String(userId)), { 
+           points: increment(XP_REWARD_AFTER_3),
+           adsWatched: newWatched // Hard set to prevent multiple claims executing increment logic
+        }).catch(e => console.error(e?.message || String(e)));
       } else {
         setPoints((p: number) => p + XP_REWARD_AFTER_3);
       }
       
-      const newWatched = WATCH_LIMIT + 1; // Mark as claimed
-      setAdsWatched(newWatched);
-      localStorage.setItem('tonew_ads_progress', newWatched.toString());
       try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
     }
   };
@@ -670,7 +772,10 @@ export default function App() {
 
       // Firebase Sync
       if (auth.currentUser) {
-        updateDoc(doc(db, 'users', String(userId)), { points: increment(reward) }).catch(e => console.error(e?.message || String(e)));
+        updateDoc(doc(db, 'users', String(userId)), { 
+           points: increment(reward),
+           completedTasks: arrayUnion(taskId)
+        }).catch(e => console.error(e?.message || String(e)));
       } else {
         setPoints(p => p + reward);
       }
@@ -1720,12 +1825,17 @@ export default function App() {
                   {isSpinning ? 'Good Luck!' : (lastWheelDate !== new Date().toDateString() ? t('freeSpin') : t('spin'))}
                 </button>
 
-                {lastWheelDate === new Date().toDateString() && adSpinsCount < 3 && !isSpinning && (
+                {lastWheelDate === new Date().toDateString() && wheelAdsWatched < 3 && !isSpinning && (
                   <button 
                     onClick={triggerWheelAd}
                     className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-black text-xs uppercase tracking-widest rounded-2xl border border-slate-700/50 transition-all flex items-center justify-center"
                   >
-                    <Megaphone className="w-4 h-4 mr-2" /> Get +1 Ad Spin ({adSpinsCount}/3)
+                    <Megaphone className="w-4 h-4 mr-2" /> Get +1 Ad Spin ({wheelAdsWatched}/3)
+                  </button>
+                )}
+                {lastWheelDate === new Date().toDateString() && wheelAdsWatched >= 3 && adSpinsCount === 0 && !isSpinning && (
+                  <button disabled className="w-full py-3 bg-slate-800 text-slate-500 font-black text-xs uppercase tracking-widest rounded-2xl border border-slate-700/50 transition-all flex items-center justify-center cursor-not-allowed">
+                    <Clock className="w-4 h-4 mr-2 opacity-60" /> Next ad spin in: {timeToReset}
                   </button>
                 )}
               </div>
