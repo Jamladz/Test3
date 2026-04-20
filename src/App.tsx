@@ -719,9 +719,9 @@ export default function App() {
            mode: 'no-cors',
            headers: { 'Content-Type': 'application/json' },
            body: JSON.stringify({
-             username: userName,
-             userId: userId,
-             address: withdrawAddress,
+             username: String(userName),
+             userId: String(userId),
+             address: String(withdrawAddress),
              amount: 4,
              timestamp: new Date().toISOString()
            })
