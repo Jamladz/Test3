@@ -603,14 +603,13 @@ export default function App() {
     if (currentWatched === WATCH_LIMIT) {
       const newWatched = WATCH_LIMIT + 1; // Mark as claimed
       setAdsWatched(newWatched);
+      setPoints((p: number) => p + XP_REWARD_AFTER_3);
       
       if (auth.currentUser) {
         updateDoc(doc(db, 'users', String(userId)), { 
            points: increment(XP_REWARD_AFTER_3),
            adsWatched: newWatched // Hard set to prevent multiple claims executing increment logic
         }).catch(e => console.error(e?.message || String(e)));
-      } else {
-        setPoints((p: number) => p + XP_REWARD_AFTER_3);
       }
       
       try { WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
@@ -655,16 +654,14 @@ export default function App() {
       setIsSpinning(false);
       // Give reward
       if (result.type === 'xp') {
+        setPoints(p => p + result.value);
         if (auth.currentUser) {
           updateDoc(doc(db, 'users', String(userId)), { points: increment(result.value) }).catch(e => console.error(e));
-        } else {
-          setPoints(p => p + result.value);
         }
       } else {
+        setTonBalance(b => b + result.value);
         if (auth.currentUser) {
           updateDoc(doc(db, 'users', String(userId)), { tonBalance: increment(result.value) }).catch(e => console.error(e));
-        } else {
-          setTonBalance(b => b + result.value);
         }
       }
       
@@ -688,6 +685,7 @@ export default function App() {
     if (!completedTasks.includes(taskId)) {
       const newCompleted = [...completedTasks, taskId];
       setCompletedTasks(newCompleted);
+      setPoints(p => p + reward);
 
       // Firebase Sync
       if (auth.currentUser) {
@@ -695,11 +693,8 @@ export default function App() {
            points: increment(reward),
            completedTasks: arrayUnion(taskId)
         }).catch(e => console.error(e?.message || String(e)));
-      } else {
-        setPoints(p => p + reward);
       }
 
-      localStorage.setItem('tonew_completed_tasks', JSON.stringify(newCompleted.map(String)));
       WebApp.HapticFeedback.notificationOccurred('success');
       
       // Cleanup pending state
@@ -713,10 +708,9 @@ export default function App() {
 
   const handleWithdraw = async () => {
     if (tonBalance >= 4 && withdrawAddress) {
+      setTonBalance(p => p - 4);
       if (auth.currentUser) {
         updateDoc(doc(db, 'users', String(userId)), { tonBalance: increment(-4) }).catch(e => console.error(e?.message || String(e)));
-      } else {
-        setTonBalance(p => p - 4);
       }
       
       // Send to Google Sheets (Mocked endpoint for demonstration)
@@ -751,14 +745,13 @@ export default function App() {
 
   const handleExchangeXP = () => {
     if (points >= 10000) {
+      setPoints(p => p - 10000);
+      setTonBalance(t => t + 1);
       if (auth.currentUser) {
         updateDoc(doc(db, 'users', String(userId)), { 
            points: increment(-10000),
            tonBalance: increment(1)
         }).catch(e => console.error(e?.message || String(e)));
-      } else {
-        setPoints(p => p - 10000);
-        setTonBalance(t => t + 1);
       }
       WebApp.HapticFeedback.notificationOccurred('success');
       showMessage('Success', 'Successfully converted 10,000 XP to 1 TON!');
@@ -882,10 +875,9 @@ export default function App() {
            <AppMiniGame 
              onClose={() => setIsGameOpen(false)} 
              onEarn={(xp) => {
+               setPoints(p => p + xp);
                if (auth.currentUser) {
                  updateDoc(doc(db, 'users', String(userId)), { points: increment(xp) }).catch(e => console.error(e?.message || String(e)));
-               } else {
-                 setPoints(p => p + xp);
                }
              }} 
            />
