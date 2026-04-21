@@ -163,6 +163,10 @@ export default function App() {
   const [completedTasks, setCompletedTasks] = useState<string[]>(() => loadState('completedTasks', []));
   const [activeTab, setActiveTab] = useState<'home' | 'tasks' | 'ads' | 'invite'>('home');
 
+  const [hasClaimedWelcomeBonus, setHasClaimedWelcomeBonus] = useState<boolean>(() => loadState('hasClaimedWelcomeBonus', false));
+  const [showWelcomeBonus, setShowWelcomeBonus] = useState(false);
+  const [isWelcomeAdLoading, setIsWelcomeAdLoading] = useState(false);
+
   useEffect(() => {
     saveState('points', points);
     saveState('tonBalance', tonBalance);
@@ -175,14 +179,53 @@ export default function App() {
     saveState('lastWheelAdDate', lastWheelAdDate);
     saveState('pendingTasks', pendingTasks);
     saveState('completedTasks', completedTasks);
-  }, [points, tonBalance, adsWatched, lastAdClaimDate, wheelAdsWatched, lastWheelDate, adSpinsCount, lastAdDate, lastWheelAdDate, pendingTasks, completedTasks]);
+    saveState('hasClaimedWelcomeBonus', hasClaimedWelcomeBonus);
+  }, [points, tonBalance, adsWatched, lastAdClaimDate, wheelAdsWatched, lastWheelDate, adSpinsCount, lastAdDate, lastWheelAdDate, pendingTasks, completedTasks, hasClaimedWelcomeBonus]);
+
+  useEffect(() => {
+    if (!isLoading && !hasClaimedWelcomeBonus) {
+      // Small delay to ensure smooth transition after loading screen
+      const timer = setTimeout(() => setShowWelcomeBonus(true), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, hasClaimedWelcomeBonus]);
 
   // --- Updated Ad Logic ---
+  const CLAIM_WELCOME_ID = "int-28074";
+
+  const claimWelcomeBonusAd = async () => {
+    const Adsgram = (window as any).Adsgram;
+    if (Adsgram) {
+      setIsWelcomeAdLoading(true);
+      try {
+        const AdController = Adsgram.init({ blockId: CLAIM_WELCOME_ID });
+        await AdController.show();
+        
+        // Ad watched successfully
+        setTonBalance(prev => prev + 1);
+        setHasClaimedWelcomeBonus(true);
+        setShowWelcomeBonus(false);
+        WebApp.HapticFeedback.notificationOccurred('success');
+        
+        // Save to Firebase just in case
+        if (auth.currentUser) {
+          updateDoc(doc(db, 'users', String(userId)), { tonBalance: increment(1) }).catch(e => console.error(e));
+        }
+
+        setIsWelcomeAdLoading(false);
+      } catch (e: any) {
+        setIsWelcomeAdLoading(false);
+        WebApp.HapticFeedback.notificationOccurred('error');
+      }
+    } else {
+        // Fallback if adsgram is entirely blocked, optionally error out:
+        WebApp.HapticFeedback.notificationOccurred('error');
+        alert("Ad blocker detected or ads failed to load. Please try again later.");
+    }
+  };
+
   const triggerAd = async () => {
-    const today = new Date().toDateString();
-    
-    // Check 3/3 daily limit using LocalStorage
-    if (lastAdClaimDate === today && adsWatched >= WATCH_LIMIT) {
+    if (!isTimePassed(lastAdClaimDate, 24) && adsWatched >= WATCH_LIMIT) {
        return; // Silently do nothing if limit reached
     }
 
@@ -193,10 +236,14 @@ export default function App() {
         const AdController = Adsgram.init({ blockId: ADS_WATCH_ID });
         await AdController.show();
         
-        // 24H Cooldown logic: reset if new day, otherwise increment
-        const newWatched = (lastAdClaimDate === today ? adsWatched : 0) + 1;
+        const isFresh = isTimePassed(lastAdClaimDate, 24);
+        const newWatched = (isFresh ? 0 : adsWatched) + 1;
         setAdsWatched(newWatched);
-        setLastAdClaimDate(today);
+        if (isFresh) {
+          // Keep claim date offset but we shouldn't overwrite it unless they claim
+          // To trace ad progress, we can use lastAdDate
+          setLastAdDate(Date.now().toString());
+        }
 
         setIsAdLoading(false);
       } catch (e: any) {
@@ -206,8 +253,7 @@ export default function App() {
   };
 
   const triggerWheelAd = async () => {
-    const today = new Date().toDateString();
-    if (wheelAdsWatched >= 3 && lastWheelDate === today) {
+    if (!isTimePassed(lastWheelAdDate, 24) && wheelAdsWatched >= 3) {
       return; // Daily limit 3
     }
     
@@ -218,11 +264,16 @@ export default function App() {
         const AdController = Adsgram.init({ blockId: ADS_WHEEL_ID });
         await AdController.show();
         
-        const newWatched = (lastWheelDate === today ? wheelAdsWatched : 0) + 1;
+        const isFresh = isTimePassed(lastWheelAdDate, 24);
+        const newWatched = (isFresh ? 0 : wheelAdsWatched) + 1;
         setWheelAdsWatched(newWatched);
-        setLastWheelDate(today);
-        setAdSpinsCount(prev => prev + 1);
         
+        if (newWatched === 1 || isFresh) {
+            setLastWheelAdDate(Date.now().toString()); 
+            // the 24 hour countdown starts from the first ad they watch in the cycle
+        }
+        
+        setAdSpinsCount(prev => prev + 1);
         setIsAdLoading(false);
       } catch (e: any) {
         setIsAdLoading(false);
@@ -231,19 +282,16 @@ export default function App() {
   };
 
   const claimAdReward = () => {
-    const today = new Date().toDateString();
-    // Claim 100 XP only if 3/3 and not yet claimed today
-    if (adsWatched >= WATCH_LIMIT && lastAdClaimDate !== today) {
+    if (adsWatched >= WATCH_LIMIT && isTimePassed(lastAdClaimDate, 24)) {
       setPoints(p => p + XP_REWARD_AFTER_3);
-      setLastAdClaimDate(today);
+      setLastAdClaimDate(Date.now().toString()); // Starts 24h cooldown
       WebApp.HapticFeedback.notificationOccurred('success');
     }
   };
 
   const spinWheel = async () => {
-    const today = new Date().toDateString();
-    // 24h limit check: 1 free, +3 from ads
-    if (lastWheelDate === today && adSpinsCount <= 0) {
+    const isFreeAvailable = isTimePassed(lastWheelDate, 24);
+    if (!isFreeAvailable && adSpinsCount <= 0) {
       return;
     }
 
@@ -259,8 +307,11 @@ export default function App() {
     else setTonBalance(b => b + selected.value);
     
     // Consume spin
-    if (lastWheelDate !== today) setLastWheelDate(today);
-    else setAdSpinsCount(prev => prev - 1);
+    if (isFreeAvailable) {
+       setLastWheelDate(Date.now().toString());
+    } else {
+       setAdSpinsCount(prev => prev - 1);
+    }
     
     return selected;
   };
@@ -341,24 +392,37 @@ export default function App() {
     }, 3500); // Changes every 3.5 seconds
     return () => clearInterval(interval);
   }, []);
-  const [timeToReset, setTimeToReset] = useState<string>('');
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    const updateCountdown = () => {
-      const now = new Date();
-      const nextMidnightUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
-      const diff = nextMidnightUTC.getTime() - now.getTime();
-      
-      const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-      const m = Math.floor((diff / 1000 / 60) % 60);
-      const s = Math.floor((diff / 1000) % 60);
-      setTimeToReset(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
-    };
-    
-    updateCountdown(); // Run immediately
-    const interval = setInterval(updateCountdown, 1000);
+    const interval = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const getSavedTimeOffset = (timeStr: string) => {
+    if (!timeStr) return 0;
+    const num = Number(timeStr);
+    if (!isNaN(num) && num > 100000000) return num; // Ensure it looks like a valid ms timestamp
+    const d = new Date(timeStr).getTime();
+    return isNaN(d) ? 0 : d;
+  };
+
+  const isTimePassed = (timeStr: string, hours = 24) => {
+    const savedTime = getSavedTimeOffset(timeStr);
+    if (!savedTime) return true;
+    return Date.now() - savedTime >= hours * 60 * 60 * 1000;
+  };
+
+  const formatCountdown = (timeStr: string, hours = 24) => {
+    const savedTime = getSavedTimeOffset(timeStr);
+    if (!savedTime) return '';
+    const diff = (hours * 60 * 60 * 1000) - (Date.now() - savedTime);
+    if (diff <= 0) return '';
+    const h = Math.floor((diff / (1000 * 60 * 60)) % 24).toString().padStart(2, '0');
+    const m = Math.floor((diff / 1000 / 60) % 60).toString().padStart(2, '0');
+    const s = Math.floor((diff / 1000) % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  };
 
   // Referral state
   const [referralsCount, setReferralsCount] = useState(0);
@@ -492,18 +556,7 @@ export default function App() {
       return onSnapshot(userRef, (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setPoints(data.points || 0);
-          setTonBalance(data.tonBalance || 0);
           setReferralsCount(data.referralsCount || 0);
-          
-          if (data.completedTasks) setCompletedTasks(data.completedTasks);
-          if (data.lastAdDate) setLastAdDate(data.lastAdDate);
-          if (data.adsWatched !== undefined) setAdsWatched(data.adsWatched);
-          
-          if (data.lastWheelDate) setLastWheelDate(data.lastWheelDate);
-          if (data.lastWheelAdDate) setLastWheelAdDate(data.lastWheelAdDate);
-          if (data.wheelAdsWatched !== undefined) setWheelAdsWatched(data.wheelAdsWatched);
-          if (data.adSpinsCount !== undefined) setAdSpinsCount(data.adSpinsCount);
         }
       });
     };
@@ -532,21 +585,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [t, userId]);
 
-  // Timer Effect
-  useEffect(() => {
-    const updateTimer = () => {
-      const now = new Date();
-      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-      const diff = tomorrow.getTime() - now.getTime();
-      const h = Math.floor((diff / (1000 * 60 * 60)) % 24).toString().padStart(2, '0');
-      const m = Math.floor((diff / 1000 / 60) % 60).toString().padStart(2, '0');
-      const s = Math.floor((diff / 1000) % 60).toString().padStart(2, '0');
-      setTimeToReset(`${h}:${m}:${s}`);
-    };
-    updateTimer();
-    const int = setInterval(updateTimer, 1000);
-    return () => clearInterval(int);
-  }, []);
+  // Timer Effect Removed as we use dynamic countdown component
 
   const pushUserData = (updates: any) => {
     if (auth.currentUser) {
@@ -1052,16 +1091,16 @@ export default function App() {
                     <Play className="fill-white text-white w-6 h-6" />
                   </div>
                   <div className="flex-1 pr-2 rtl:pl-2 rtl:pr-0">
-                    <p className="font-extrabold text-sm text-slate-100">{t('sponsorTasks')} <span className="text-[10px] bg-slate-900/50 px-1.5 py-0.5 rounded ml-1 font-mono text-pink-300">{Math.min(lastAdDate === new Date().toDateString() ? adsWatched : 0, 3)}/3</span></p>
+                    <p className="font-extrabold text-sm text-slate-100">{t('sponsorTasks')} <span className="text-[10px] bg-slate-900/50 px-1.5 py-0.5 rounded ml-1 font-mono text-pink-300">{Math.min(isTimePassed(lastAdClaimDate, 24) ? adsWatched : 3, 3)}/3</span></p>
                     <p className="text-xs font-bold text-pink-400 mt-1 bg-pink-400/10 inline-flex items-center px-2 py-0.5 rounded-md drop-shadow-sm">+100 <XpIcon className="w-4 h-4 ml-1.5" /></p>
                   </div>
                 </div>
-                {(lastAdDate === new Date().toDateString() && adsWatched > 3) ? (
+                {!isTimePassed(lastAdClaimDate, 24) ? (
                   <button disabled className="bg-slate-700 text-slate-300 font-extrabold py-2 px-4 rounded-xl border-b-[3px] border-slate-800 transition-all text-xs shrink-0 cursor-not-allowed flex flex-col items-center justify-center min-w-[80px]">
                     <Clock className="w-4 h-4 mb-0.5 opacity-60" />
-                    <span className="font-mono tracking-wider opacity-80">{timeToReset}</span>
+                    <span className="font-mono tracking-wider opacity-80">{formatCountdown(lastAdClaimDate, 24)}</span>
                   </button>
-                ) : (lastAdDate === new Date().toDateString() && adsWatched === 3) ? (
+                ) : adsWatched >= 3 ? (
                   <button onClick={claimAdReward} className="bg-emerald-500 text-white font-extrabold py-2.5 px-6 rounded-xl border-b-[3px] border-emerald-700 active:border-b-0 active:translate-y-[3px] transition-all text-sm shrink-0">
                     {t('claim')}
                   </button>
@@ -1596,16 +1635,16 @@ export default function App() {
                 <div className="bg-slate-800/60 rounded-xl py-2 px-4 shadow-inner border border-slate-700/50 flex flex-col items-center justify-center min-w-[200px]">
                   <div className="flex items-center text-xs font-black uppercase tracking-wider text-slate-200">
                     <RefreshCw className={`w-3.5 h-3.5 mr-2 text-cyan-400 ${isSpinning ? 'animate-spin' : ''}`} />
-                    {lastWheelDate !== new Date().toDateString() ? (
+                    {isTimePassed(lastWheelDate, 24) ? (
                       <span className="text-emerald-400">{t('freeSpin') || 'Free Spin'}</span>
                     ) : (
                       <span className="text-slate-400">{t('adSpin') || 'Ad Spin'} ({adSpinsCount})</span>
                     )}
                   </div>
                   
-                  {lastWheelDate === new Date().toDateString() && (
+                  {!isTimePassed(lastWheelDate, 24) && (
                     <div className="flex items-center mt-2 text-[10px] font-bold text-pink-400 uppercase tracking-widest bg-pink-500/10 px-2.5 py-1 rounded-md border border-pink-500/20 w-fit shrink-0">
-                      <Clock className="w-3 h-3 mr-1.5" /> Next free in: <span className="font-mono ml-1">{timeToReset}</span>
+                      <Clock className="w-3 h-3 mr-1.5" /> Next free in: <span className="font-mono ml-1">{formatCountdown(lastWheelDate, 24)}</span>
                     </div>
                   )}
                 </div>
@@ -1676,23 +1715,23 @@ export default function App() {
               <div className="w-full space-y-4 z-10">
                 <button 
                   onClick={handleStartSpin}
-                  disabled={isSpinning || (lastWheelDate === new Date().toDateString() && adSpinsCount === 0)}
-                  className={`w-full py-4 rounded-2xl font-black text-lg uppercase tracking-widest transition-all shadow-xl active:scale-95 disabled:grayscale disabled:opacity-50 ${!isSpinning && (lastWheelDate !== new Date().toDateString() || adSpinsCount > 0) ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-500/20' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
+                  disabled={isSpinning || (!isTimePassed(lastWheelDate, 24) && adSpinsCount === 0)}
+                  className={`w-full py-4 rounded-2xl font-black text-lg uppercase tracking-widest transition-all shadow-xl active:scale-95 disabled:grayscale disabled:opacity-50 ${!isSpinning && (isTimePassed(lastWheelDate, 24) || adSpinsCount > 0) ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-500/20' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
                 >
-                  {isSpinning ? 'Good Luck!' : (lastWheelDate !== new Date().toDateString() ? t('freeSpin') : t('spin'))}
+                  {isSpinning ? 'Good Luck!' : (isTimePassed(lastWheelDate, 24) ? t('freeSpin') : t('spin'))}
                 </button>
 
-                {lastWheelDate === new Date().toDateString() && (lastWheelAdDate === new Date().toDateString() ? wheelAdsWatched : 0) < 3 && !isSpinning && (
+                {!isTimePassed(lastWheelDate, 24) && (isTimePassed(lastWheelAdDate, 24) ? Math.min(wheelAdsWatched, 0) : wheelAdsWatched) < 3 && !isSpinning && (
                   <button 
                     onClick={triggerWheelAd}
                     className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-black text-xs uppercase tracking-widest rounded-2xl border border-slate-700/50 transition-all flex items-center justify-center"
                   >
-                    <Megaphone className="w-4 h-4 mr-2" /> Get +1 Ad Spin ({lastWheelAdDate === new Date().toDateString() ? wheelAdsWatched : 0}/3)
+                    <Megaphone className="w-4 h-4 mr-2" /> Get +1 Ad Spin ({isTimePassed(lastWheelAdDate, 24) ? 0 : wheelAdsWatched}/3)
                   </button>
                 )}
-                {lastWheelDate === new Date().toDateString() && (lastWheelAdDate === new Date().toDateString() ? wheelAdsWatched : 0) >= 3 && adSpinsCount === 0 && !isSpinning && (
+                {!isTimePassed(lastWheelDate, 24) && (!isTimePassed(lastWheelAdDate, 24) && wheelAdsWatched >= 3) && adSpinsCount === 0 && !isSpinning && (
                   <button disabled className="w-full py-3 bg-slate-800 text-slate-500 font-black text-xs uppercase tracking-widest rounded-2xl border border-slate-700/50 transition-all flex items-center justify-center cursor-not-allowed">
-                    <Clock className="w-4 h-4 mr-2 opacity-60" /> Next ad spin in: {timeToReset}
+                    <Clock className="w-4 h-4 mr-2 opacity-60" /> Next ad spin in: {formatCountdown(lastWheelAdDate, 24)}
                   </button>
                 )}
               </div>
@@ -1811,6 +1850,47 @@ export default function App() {
                    </span>
                 </div>
               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Welcome Bonus Modal */}
+      <AnimatePresence>
+        {showWelcomeBonus && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[150] flex flex-col items-center justify-center p-6 bg-slate-950/80 backdrop-blur-md"
+          >
+            <div className="bg-slate-900 border-2 border-amber-500/30 rounded-[32px] p-8 w-full max-w-sm shadow-[0_0_40px_rgba(245,158,11,0.2)] relative overflow-hidden flex flex-col items-center text-center">
+               <div className="absolute top-[-20%] right-[-20%] w-40 h-40 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"></div>
+               <div className="absolute bottom-[-20%] left-[-20%] w-40 h-40 bg-orange-500/20 rounded-full blur-3xl pointer-events-none"></div>
+               
+               <div className="w-24 h-24 mb-6 relative z-10 flex items-center justify-center bg-gradient-to-br from-amber-400 to-orange-500 rounded-full shadow-lg shadow-amber-500/20 border-[4px] border-slate-900">
+                  <Coins className="w-12 h-12 text-white" />
+               </div>
+               
+               <h2 className="text-3xl font-black text-white mb-2 tracking-tight">Bonus! 1 TON</h2>
+               <p className="text-slate-400 font-medium text-sm mb-8 leading-relaxed">
+                  Welcome! You've received a starting bonus. Watch a short sponsor ad to immediately claim your <span className="text-amber-400 font-bold">1 TON</span> straight to your internal wallet.
+               </p>
+               
+               <button 
+                  onClick={claimWelcomeBonusAd}
+                  disabled={isWelcomeAdLoading}
+                  className="w-full py-4 rounded-2xl font-black text-lg uppercase tracking-widest transition-all shadow-xl shadow-amber-500/20 active:scale-95 bg-gradient-to-r from-amber-500 to-orange-500 text-white flex items-center justify-center disabled:opacity-70 disabled:grayscale relative overflow-hidden group"
+               >
+                  <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 pointer-events-none"></div>
+                  {isWelcomeAdLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Claim 1 TON'}
+               </button>
+               <button 
+                 onClick={() => { setShowWelcomeBonus(false); setHasClaimedWelcomeBonus(true); }}
+                 className="mt-4 text-[11px] uppercase tracking-widest font-bold text-slate-500 hover:text-slate-400 focus:outline-none transition-colors"
+               >
+                 Close & Skip
+               </button>
             </div>
           </motion.div>
         )}
