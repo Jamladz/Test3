@@ -2,7 +2,14 @@ import React, { useState, useEffect } from 'react';
 import WebApp from '@twa-dev/sdk';
 import { useTranslation } from 'react-i18next';
 import { TonConnectButton, useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
-import { Wallet, PlusCircle, Users, Play, Coins, Activity, Send, X, ExternalLink, Copy, Share2, Check, Home, ShieldCheck, Clock, Gamepad2, Trophy, Bell, FileText, Megaphone, Gift, ChevronRight, Folder, Globe, ArrowRightLeft, Sparkles, RefreshCw, Instagram, Youtube, Loader2 } from 'lucide-react';
+import { Wallet, PlusCircle, Users, Play, Coins, Activity, Send, X, ExternalLink, Copy, Share2, Check, Home, ShieldCheck, Clock, Gamepad2, Trophy, Bell, FileText, Megaphone, Gift, ChevronRight, Folder, Globe, ArrowRightLeft, Sparkles, RefreshCw, Instagram, Youtube, Loader2, BadgeCheck } from 'lucide-react';
+
+const TonIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <path d="M14 0C6.26801 0 0 6.26801 0 14C0 21.732 6.26801 28 14 28C21.732 28 28 21.732 28 14C28 6.26801 21.732 0 14 0Z" fill="#0098EA"/>
+    <path d="M19.7895 8.78455C19.7131 8.70678 19.6105 8.66318 19.5028 8.66318H15.0118V14.1843C15.0118 14.3644 14.8659 14.5103 14.6858 14.5103C14.5057 14.5103 14.3598 14.3644 14.3598 14.1843V8.66318H8.49658C8.38883 8.66318 8.28631 8.70678 8.20988 8.78455C8.13345 8.86233 8.09062 8.96655 8.09241 9.07604L8.74029 17.6186C8.76182 17.9001 8.99595 18.1219 9.27838 18.1219H12.7915L14.1841 21.5791C14.2468 21.7323 14.3976 21.83 14.5638 21.83C14.7301 21.83 14.8808 21.7323 14.9435 21.5791L16.3361 18.1219H18.721C19.0034 18.1219 19.2376 17.9001 19.2591 17.6186L19.907 9.07604C19.9088 8.96655 19.8659 8.86233 19.7895 8.78455Z" fill="white"/>
+  </svg>
+);
 import { motion, AnimatePresence } from 'motion/react';
 import { AppLoadingScreen } from './components/AppLoadingScreen';
 import { AppMiniGame } from './components/AppMiniGame';
@@ -138,6 +145,13 @@ const TON_TO_XP_RATE = 1000000; // 1 TON = 1,000,000 XP
 
 export default function App() {
   const { t, i18n } = useTranslation();
+  
+  const getLevelInfo = (xp: number) => {
+    if (xp >= 150000) return { name: 'Liv 4', level: 4 };
+    if (xp >= 50000) return { name: 'Liv 3', level: 3 };
+    if (xp >= 10000) return { name: 'Liv 2', level: 2 };
+    return { name: 'Liv 1', level: 1 };
+  };
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState<string>('Guest');
   // --- Updated: LocalStorage State Management ---
@@ -151,6 +165,7 @@ export default function App() {
   };
 
   const [points, setPoints] = useState<number>(() => loadState('points', 0));
+  const currentLevel = getLevelInfo(points);
   const [tonBalance, setTonBalance] = useState<number>(() => loadState('tonBalance', 0));
   const [adsWatched, setAdsWatched] = useState<number>(() => loadState('adsWatched', 0));
   const [lastAdClaimDate, setLastAdClaimDate] = useState<string>(() => loadState('lastAdClaimDate', ''));
@@ -225,8 +240,8 @@ export default function App() {
   };
 
   const triggerAd = async () => {
-    if (!isTimePassed(lastAdClaimDate, 24) && adsWatched >= WATCH_LIMIT) {
-       return; // Silently do nothing if limit reached
+    if (!isTimePassed(lastAdClaimDate, 24) || adsWatched >= WATCH_LIMIT) {
+       return; // Silently do nothing if limit reached or in cooldown
     }
 
     const Adsgram = (window as any).Adsgram;
@@ -236,14 +251,7 @@ export default function App() {
         const AdController = Adsgram.init({ blockId: ADS_WATCH_ID });
         await AdController.show();
         
-        const isFresh = isTimePassed(lastAdClaimDate, 24);
-        const newWatched = (isFresh ? 0 : adsWatched) + 1;
-        setAdsWatched(newWatched);
-        if (isFresh) {
-          // Keep claim date offset but we shouldn't overwrite it unless they claim
-          // To trace ad progress, we can use lastAdDate
-          setLastAdDate(Date.now().toString());
-        }
+        setAdsWatched(prev => prev + 1);
 
         setIsAdLoading(false);
       } catch (e: any) {
@@ -284,7 +292,8 @@ export default function App() {
   const claimAdReward = () => {
     if (adsWatched >= WATCH_LIMIT && isTimePassed(lastAdClaimDate, 24)) {
       setPoints(p => p + XP_REWARD_AFTER_3);
-      setLastAdClaimDate(Date.now().toString()); // Starts 24h cooldown
+      setLastAdClaimDate(Date.now().toString()); // Starts exact 24h cooldown timer
+      setAdsWatched(0); // Reset immediately now that the cycle is complete
       WebApp.HapticFeedback.notificationOccurred('success');
     }
   };
@@ -878,9 +887,14 @@ export default function App() {
              </div>
           </div>
           <div className="flex flex-col">
-             <span className="font-bold text-sm leading-tight text-white mb-0.5 max-w-[80px] lg:max-w-[120px] truncate block">{userName}</span>
+             <div className="flex items-center mb-0.5">
+               <span className="font-bold text-sm leading-tight text-white max-w-[80px] lg:max-w-[120px] truncate block">{userName}</span>
+               {currentLevel.level >= 4 && (
+                 <BadgeCheck className="w-4 h-4 text-blue-400 ml-1 fill-blue-500/20" />
+               )}
+             </div>
              <span className="text-[10px] text-yellow-400 font-extrabold tracking-widest uppercase bg-yellow-400/10 px-1.5 py-0.5 rounded-md inline-block w-max">
-                {t('lvlNewbie')}
+                {currentLevel.name}
              </span>
           </div>
         </div>
@@ -1091,7 +1105,7 @@ export default function App() {
                     <Play className="fill-white text-white w-6 h-6" />
                   </div>
                   <div className="flex-1 pr-2 rtl:pl-2 rtl:pr-0">
-                    <p className="font-extrabold text-sm text-slate-100">{t('sponsorTasks')} <span className="text-[10px] bg-slate-900/50 px-1.5 py-0.5 rounded ml-1 font-mono text-pink-300">{Math.min(isTimePassed(lastAdClaimDate, 24) ? adsWatched : 3, 3)}/3</span></p>
+                    <p className="font-extrabold text-sm text-slate-100">{t('sponsorTasks')} <span className="text-[10px] bg-slate-900/50 px-1.5 py-0.5 rounded ml-1 font-mono text-pink-300">{!isTimePassed(lastAdClaimDate, 24) ? 3 : adsWatched}/3</span></p>
                     <p className="text-xs font-bold text-pink-400 mt-1 bg-pink-400/10 inline-flex items-center px-2 py-0.5 rounded-md drop-shadow-sm">+100 <XpIcon className="w-4 h-4 ml-1.5" /></p>
                   </div>
                 </div>
@@ -1101,11 +1115,11 @@ export default function App() {
                     <span className="font-mono tracking-wider opacity-80">{formatCountdown(lastAdClaimDate, 24)}</span>
                   </button>
                 ) : adsWatched >= 3 ? (
-                  <button onClick={claimAdReward} className="bg-emerald-500 text-white font-extrabold py-2.5 px-6 rounded-xl border-b-[3px] border-emerald-700 active:border-b-0 active:translate-y-[3px] transition-all text-sm shrink-0">
+                  <button onClick={claimAdReward} className="bg-emerald-500 text-white font-extrabold py-2.5 px-6 rounded-xl border-b-[3px] border-emerald-700 active:border-b-0 active:translate-y-[3px] transition-all text-sm shrink-0 shadow-lg shadow-emerald-500/20">
                     {t('claim')}
                   </button>
                 ) : (
-                  <button onClick={triggerAd} disabled={isAdLoading} className="bg-pink-500 text-white font-extrabold py-2.5 px-5 rounded-xl border-b-[3px] border-pink-700 active:border-b-0 active:translate-y-[3px] transition-all text-sm shrink-0 disabled:opacity-80 flex items-center justify-center min-w-[80px]">
+                  <button onClick={triggerAd} disabled={isAdLoading} className="bg-pink-500 text-white font-extrabold py-2.5 px-5 rounded-xl border-b-[3px] border-pink-700 active:border-b-0 active:translate-y-[3px] transition-all text-sm shrink-0 disabled:opacity-80 flex items-center justify-center min-w-[80px] shadow-lg shadow-pink-500/20">
                     {isAdLoading ? <Loader2 className="w-4 h-4 animate-spin my-0.5 mx-2" /> : t('watch')}
                   </button>
                 )}
@@ -1868,8 +1882,8 @@ export default function App() {
                <div className="absolute top-[-20%] right-[-20%] w-40 h-40 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"></div>
                <div className="absolute bottom-[-20%] left-[-20%] w-40 h-40 bg-orange-500/20 rounded-full blur-3xl pointer-events-none"></div>
                
-               <div className="w-24 h-24 mb-6 relative z-10 flex items-center justify-center bg-gradient-to-br from-amber-400 to-orange-500 rounded-full shadow-lg shadow-amber-500/20 border-[4px] border-slate-900">
-                  <Coins className="w-12 h-12 text-white" />
+               <div className="w-28 h-28 mb-6 relative z-10 flex items-center justify-center bg-slate-900 rounded-full shadow-xl shadow-amber-500/10 border-[4px] border-slate-800 overflow-hidden p-2">
+                  <img src="https://i.suar.me/6zQ9x/l" alt="TON Bonus" referrerPolicy="no-referrer" className="w-full h-full object-contain" />
                </div>
                
                <h2 className="text-3xl font-black text-white mb-2 tracking-tight">Bonus! 1 TON</h2>
