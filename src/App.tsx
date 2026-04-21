@@ -156,6 +156,12 @@ export default function App() {
   const [lastAdClaimDate, setLastAdClaimDate] = useState<string>(() => loadState('lastAdClaimDate', ''));
   const [wheelAdsWatched, setWheelAdsWatched] = useState<number>(() => loadState('wheelAdsWatched', 0));
   const [lastWheelDate, setLastWheelDate] = useState<string>(() => loadState('lastWheelDate', ''));
+  const [adSpinsCount, setAdSpinsCount] = useState<number>(() => loadState('adSpinsCount', 0));
+  const [lastAdDate, setLastAdDate] = useState<string>(() => loadState('lastAdDate', ''));
+  const [lastWheelAdDate, setLastWheelAdDate] = useState<string>(() => loadState('lastWheelAdDate', ''));
+  const [pendingTasks, setPendingTasks] = useState<Record<string, number>>(() => loadState('pendingTasks', {}));
+  const [completedTasks, setCompletedTasks] = useState<string[]>(() => loadState('completedTasks', []));
+  const [activeTab, setActiveTab] = useState<'home' | 'tasks' | 'ads' | 'invite'>('home');
 
   useEffect(() => {
     saveState('points', points);
@@ -164,7 +170,12 @@ export default function App() {
     saveState('lastAdClaimDate', lastAdClaimDate);
     saveState('wheelAdsWatched', wheelAdsWatched);
     saveState('lastWheelDate', lastWheelDate);
-  }, [points, tonBalance, adsWatched, lastAdClaimDate, wheelAdsWatched, lastWheelDate]);
+    saveState('adSpinsCount', adSpinsCount);
+    saveState('lastAdDate', lastAdDate);
+    saveState('lastWheelAdDate', lastWheelAdDate);
+    saveState('pendingTasks', pendingTasks);
+    saveState('completedTasks', completedTasks);
+  }, [points, tonBalance, adsWatched, lastAdClaimDate, wheelAdsWatched, lastWheelDate, adSpinsCount, lastAdDate, lastWheelAdDate, pendingTasks, completedTasks]);
 
   // --- Updated Ad Logic ---
   const triggerAd = async () => {
@@ -237,10 +248,10 @@ export default function App() {
     }
 
     const rewards = [
-      { label: '5 XP', type: 'xp', value: 5 },
-      { label: '10 XP', type: 'xp', value: 10 },
-      { label: '15 XP', type: 'xp', value: 15 },
-      { label: '0.005 TON', type: 'ton', value: 0.005 },
+      { id: 0, label: '5 XP', type: 'xp', value: 5 },
+      { id: 1, label: '10 XP', type: 'xp', value: 10 },
+      { id: 2, label: '15 XP', type: 'xp', value: 15 },
+      { id: 3, label: '0.005 TON', type: 'ton', value: 0.005 },
     ];
     const selected = rewards[Math.floor(Math.random() * rewards.length)];
 
