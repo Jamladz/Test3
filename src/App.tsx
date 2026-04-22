@@ -522,8 +522,10 @@ export default function App() {
                  invitedBy: inviterId,
                  createdAt: new Date().toISOString()
                });
+               setPoints(p => p + localPointsBonus);
              } else {
                batch.update(userRef, { points: increment(200) });
+               setPoints(p => p + 200);
              }
 
              await batch.commit();
@@ -547,6 +549,7 @@ export default function App() {
              invitedBy: null,
              createdAt: new Date().toISOString()
            });
+           await setDoc(doc(db, 'system', 'usersList'), { uids: arrayUnion(tId) }, { merge: true });
         }
       } else if (!userSnap.exists()) {
         // No referral, just normal user creation
@@ -559,13 +562,22 @@ export default function App() {
           invitedBy: null,
           createdAt: new Date().toISOString()
         });
+        await setDoc(doc(db, 'system', 'usersList'), { uids: arrayUnion(tId) }, { merge: true });
       }
 
       // Realtime listener for this user
       return onSnapshot(userRef, (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setReferralsCount(data.referralsCount || 0);
+          const remoteRefs = data.referralsCount || 0;
+          setReferralsCount(remoteRefs);
+          
+          const localRefs = parseInt(localStorage.getItem('tonew_syncedReferrals') || '0', 10);
+          if (remoteRefs > localRefs) {
+            const diff = remoteRefs - localRefs;
+            setPoints(p => p + (diff * 200));
+            localStorage.setItem('tonew_syncedReferrals', remoteRefs.toString());
+          }
         }
       });
     };
