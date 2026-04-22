@@ -4,18 +4,22 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite build --watch & vite preview --host 0.0.0.0 --port 3000",
+    "dev": "tsx server.ts",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node server.ts"
   },
   "dependencies": {
     "@tonconnect/ui-react": "^2.0.0",
     "@twa-dev/sdk": "^7.0.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "firebase": "^10.12.0",
     "i18next": "^23.11.0",
     "lucide-react": "^0.370.0",
     "motion": "^11.0.0",
+    "node-cron": "^4.2.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-i18next": "^14.1.0"
@@ -24,6 +28,8 @@
     "@eslint/js": "^10.0.1",
     "@firebase/eslint-plugin-security-rules": "^0.0.1",
     "@tailwindcss/vite": "^4.2.2",
+    "@types/express": "^5.0.6",
+    "@types/node-cron": "^3.0.11",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react": "^4.2.1",
@@ -32,6 +38,7 @@
     "globals": "^17.5.0",
     "postcss": "^8.4.38",
     "tailwindcss": "^4.2.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.2.2",
     "typescript-eslint": "^8.58.2",
     "vite": "^5.2.0"

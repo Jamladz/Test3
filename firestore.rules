@@ -53,7 +53,7 @@ service cloud.firestore {
         let diff = data.diff(existing());
         return diff.affectedKeys().hasOnly(['points', 'referralsCount', 'lastReferred'])
             && data.points == existing().points + 200
-            && data.referralsCount == existing().referralsCount + 1
+            && data.referralsCount == (existing().get('referralsCount', 0) + 1)
             && data.lastReferred is string
             && isValidId(data.lastReferred)
             // CRITICAL ATOMICITY: The referral document must be created exactly now
@@ -76,6 +76,10 @@ service cloud.firestore {
 
 
     // --- Paths ---
+    match /system/{document=**} {
+      allow read, write: if true;
+    }
+
     match /users/{userId} {
         // Read: A user can only read their own document (based on authUid)
         // Wait, for referrals, the invited user reads the inviter's document? NO, they just write.
