@@ -1,0 +1,72 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A player in the game",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Telegram user ID as string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "firstName": {
+          "type": "string"
+        },
+        "balance": {
+          "type": "number",
+          "description": "Coin balance"
+        },
+        "energy": {
+          "type": "number"
+        },
+        "maxEnergy": {
+          "type": "number"
+        },
+        "profitPerHour": {
+          "type": "number"
+        },
+        "lastLogin": {
+          "type": "number",
+          "description": "Timestamp"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "admin"]
+        },
+        "friendsCount": {
+          "type": "number"
+        },
+        "adsWatched": {
+          "type": "number"
+        },
+        "upgrades": {
+          "type": "object",
+          "description": "Map of upgradeId to level"
+        },
+        "missions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "walletAddress": {
+          "type": "string"
+        },
+        "referredBy": {
+          "type": "string",
+          "description": "ID of the user who referred this user"
+        }
+      },
+      "required": ["id", "balance", "energy", "maxEnergy", "profitPerHour", "lastLogin"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "User profiles and game state."
+    }
+  }
+}

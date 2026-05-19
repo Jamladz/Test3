@@ -1,0 +1,7 @@
+name = "tap-game-frontend"
+compatibility_date = "2024-03-20"
+pages_build_output_dir = "dist"
+
+[env.production]
+# Add any build environment variables here
+VITE_API_URL = "https://tap-game-api.your-domain.workers.dev"
