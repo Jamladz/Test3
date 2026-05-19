@@ -1,0 +1,19 @@
+name = "tap-game-api"
+main = "src/index.ts"
+compatibility_date = "2024-03-20"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "tap-game-db"
+database_id = "YOUR_D1_DATABASE_ID"
+
+# KV Namespace binding (for rapid caching/leaderboards)
+[[kv_namespaces]]
+binding = "GAME_CACHE"
+id = "YOUR_KV_NAMESPACE_ID"
+
+[vars]
+TELEGRAM_BOT_TOKEN = "YOUR_BOT_TOKEN"
+JWT_SECRET = "YOUR_JWT_SECRET"
+ENVIRONMENT = "production"
