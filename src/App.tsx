@@ -18,7 +18,7 @@ export default function App() {
   useEffect(() => {
     if (user) {
       const loadGame = async () => {
-        await fetchUser(user.id, user.username, user.first_name, user.start_param);
+        await fetchUser(user.id.toString(), user.username, user.first_name, user.start_param);
         setIsLoading(false);
       };
       loadGame();
