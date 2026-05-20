@@ -31,7 +31,7 @@ export const GameService = {
       // Handle Referral sign up
       if (startParam && startParam.startsWith('ref')) {
         const referrerId = startParam.replace('ref', '');
-        if (referrerId && referrerId !== uid) {
+        if (referrerId && referrerId !== telegramId.toString()) {
           try {
             const refDoc = doc(db, 'referrals', uid);
             await setDoc(refDoc, { userId: uid, referrerId });
@@ -73,13 +73,23 @@ export const GameService = {
     }
     
     // Check friend count manually since we don't have triggers
-    const refQuery = query(collection(db, 'referrals'), where('referrerId', '==', uid));
+    const refQuery = query(collection(db, 'referrals'), where('referrerId', '==', telegramId));
     const refSnap = await getCountFromServer(refQuery);
     const count = refSnap.data().count;
     const data = snap.data();
     
-    if (count !== data.friendsCount) {
-       await updateDoc(userRef, { friendsCount: count });
+    if (count > (data.friendsCount || 0)) {
+       const diff = count - (data.friendsCount || 0);
+       const bonus = diff * 100000;
+       
+       await updateDoc(userRef, { 
+           friendsCount: count,
+           balance: increment(bonus)
+       });
+       
+       if (data.balance !== undefined) {
+           data.balance += bonus;
+       }
        data.friendsCount = count;
     }
 
