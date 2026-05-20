@@ -10,16 +10,21 @@ export function Friends() {
 
   const handleInvite = () => {
     const twa = (window as any).Telegram?.WebApp;
+    const shortLink = `https://t.me/PlushTap_bot?startapp=ref${userId}`;
+    const botLink = encodeURIComponent(`https://t.me/PlushTap_bot?start=ref${userId}`);
+    const text = encodeURIComponent('Join me and get 50,000 Pepe coins as a welcome bonus!');
+    
     if (twa) {
-      twa.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(getInviteLink())}&text=${encodeURIComponent('Join me and get 50,000 Pepe coins as a welcome bonus!')}`);
+      twa.openTelegramLink(`https://t.me/share/url?url=${shortLink}&text=${text}`);
     } else {
-      navigator.clipboard.writeText(getInviteLink());
-      alert("Invite link copied to clipboard: " + getInviteLink());
+      navigator.clipboard.writeText(shortLink);
+      alert("Invite link copied to clipboard: " + shortLink);
     }
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(getInviteLink());
+    const shortLink = `https://t.me/PlushTap_bot?startapp=ref${userId}`;
+    navigator.clipboard.writeText(shortLink);
     const twa = (window as any).Telegram?.WebApp;
     if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
   };
@@ -39,7 +44,7 @@ export function Friends() {
           <div className="flex-1">
             <h3 className="font-bold text-sm mb-1 text-white">Invite a friend</h3>
             <div className="flex items-center gap-1.5 text-[#FFD700] font-mono text-xs">
-              <img src="https://i.suar.me/dgMM9/l" alt="Coin" className="w-3.5 h-3.5 object-contain drop-shadow-[0_0_5px_rgba(255,215,0,0.5)]" />
+              <img src="https://i.suar.me/qv4lV/l" alt="Coin" className="w-3.5 h-3.5 object-contain drop-shadow-[0_0_5px_rgba(255,215,0,0.5)]" />
               <span className="font-bold">+100k for you, +50k for friend</span>
             </div>
           </div>
