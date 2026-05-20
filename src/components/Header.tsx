@@ -74,7 +74,7 @@ export function Header() {
           <div className="flex flex-col items-center">
             <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1">Profit per hour</span>
             <div className="flex items-center gap-1.5 font-mono">
-              <img src="https://i.suar.me/dgMM9/l" alt="Coin" className="w-3.5 h-3.5 object-contain drop-shadow-[0_0_5px_rgba(255,215,0,0.5)]" />
+              <img src="https://i.suar.me/qv4lV/l" alt="Coin" className="w-3.5 h-3.5 object-contain drop-shadow-[0_0_5px_rgba(255,215,0,0.5)]" />
               <span className="text-sm font-bold text-white tracking-tight">+{formatCurrency(profitPerHour)}</span>
             </div>
           </div>
