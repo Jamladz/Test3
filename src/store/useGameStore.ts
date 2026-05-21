@@ -179,11 +179,11 @@ export const useGameStore = create<GameState>()(
       // Energy regen is 3 per second, no time cap but maxed at maxEnergy
       const energyRegen = secondsPassed * 3;
 
-      set({
-        offlineEarnings: offlineCoins > 0 ? offlineCoins : 0,
+      set((state) => ({
+        offlineEarnings: (state.offlineEarnings || 0) + (offlineCoins > 0 ? offlineCoins : 0),
         energy: Math.min(state.maxEnergy, state.energy + energyRegen),
         lastLogin: now
-      });
+      }));
       // Fire sync immediately to save to backend
       get().sync();
     } else if (secondsPassed > 0) {
