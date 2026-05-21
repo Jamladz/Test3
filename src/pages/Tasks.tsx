@@ -10,6 +10,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { formatCurrency } from "../lib/utils";
+import { audioManager } from '../lib/audio';
 
 const TASKS = [
   {
@@ -90,12 +91,14 @@ export function Tasks() {
 
         // Wait a small delay to feel more realistic before granting
         setTimeout(async () => {
+          audioManager.playCoinSound();
           await completeMissionApi(id, reward);
           if (twa?.HapticFeedback) {
             twa.HapticFeedback.notificationOccurred("success");
           }
         }, 1500);
       } else {
+        audioManager.playCoinSound();
         await completeMissionApi(id, reward);
       }
     }
@@ -104,17 +107,19 @@ export function Tasks() {
   const handleWatchAd = () => {
     if (adsWatched >= 5) return;
     const AdController = (window as any).Adsgram?.init({
-      blockId: "int-16720",
+      blockId: "int-30809",
     });
     if (AdController) {
       AdController.show()
         .then(async (result: any) => {
           incrementAdsWatched(); // Mock local req increment
+          audioManager.playCoinSound();
           await completeMissionApi(`ad_${Date.now()}`, 50000);
         })
         .catch((result: any) => {});
     } else {
       incrementAdsWatched(); // Mock local req increment
+      audioManager.playCoinSound();
       completeMissionApi(`ad_${Date.now()}`, 50000);
     }
   };
@@ -125,6 +130,7 @@ export function Tasks() {
 
   const handleDailyReward = async () => {
     if (!isDailyDone) {
+      audioManager.playCoinSound();
       await completeMissionApi(dailyMissionId, 20000);
       const twa = (window as any).Telegram?.WebApp;
       if (twa?.HapticFeedback) {

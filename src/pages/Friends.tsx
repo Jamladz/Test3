@@ -6,13 +6,12 @@ import { formatCurrency } from '../lib/utils';
 export function Friends() {
   const { friendsCount, userId } = useGameStore();
 
-  const getInviteLink = () => `https://t.me/PlushTap_bot?start=ref${userId}`;
+  const getInviteLink = () => `https://t.me/PlushTap_bot/app?startapp=ref${userId}`;
 
   const handleInvite = () => {
     const twa = (window as any).Telegram?.WebApp;
-    const shortLink = `https://t.me/PlushTap_bot?startapp=ref${userId}`;
-    const botLink = encodeURIComponent(`https://t.me/PlushTap_bot?start=ref${userId}`);
-    const text = encodeURIComponent('Join me and get 50,000 Pepe coins as a welcome bonus!');
+    const shortLink = `https://t.me/PlushTap_bot/app?startapp=ref${userId}`;
+    const text = encodeURIComponent('Join me and get 60,000 Pepe coins as a welcome bonus!');
     
     if (twa) {
       twa.openTelegramLink(`https://t.me/share/url?url=${shortLink}&text=${text}`);
@@ -23,7 +22,7 @@ export function Friends() {
   };
 
   const handleCopy = () => {
-    const shortLink = `https://t.me/PlushTap_bot?startapp=ref${userId}`;
+    const shortLink = `https://t.me/PlushTap_bot/app?startapp=ref${userId}`;
     navigator.clipboard.writeText(shortLink);
     const twa = (window as any).Telegram?.WebApp;
     if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
@@ -45,7 +44,7 @@ export function Friends() {
             <h3 className="font-bold text-sm mb-1 text-white">Invite a friend</h3>
             <div className="flex items-center gap-1.5 text-[#FFD700] font-mono text-xs">
               <img src="https://i.suar.me/qv4lV/l" alt="Coin" className="w-3.5 h-3.5 object-contain drop-shadow-[0_0_5px_rgba(255,215,0,0.5)]" />
-              <span className="font-bold">+100k for you, +50k for friend</span>
+              <span className="font-bold">+100k for you, +60k for friend</span>
             </div>
           </div>
         </div>

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore } from '../store/useGameStore';
 import { formatCurrency, formatNumber } from '../lib/utils';
 import { Zap, Coins, FerrisWheel, Map, X, CheckCircle2 } from 'lucide-react';
+import { audioManager } from '../lib/audio';
 
 export function Game() {
   const { balance, energy, maxEnergy, tapMultiplier, addBalance, reduceEnergy, increaseEnergy, offlineEarnings, claimOfflineEarnings } = useGameStore();
@@ -109,9 +110,9 @@ export function Game() {
       </div>
 
       {/* Main Tap Area */}
-      <div className="flex flex-row items-center justify-center w-full px-2 md:px-6 my-auto shrink-[1] min-h-[220px]">
+      <div className="flex flex-row items-center justify-center w-full px-2 md:px-6 my-auto shrink-[1] min-h-[240px]">
         <div 
-          className="relative w-56 h-56 md:w-[300px] md:h-[300px] sm:w-[260px] sm:h-[260px] max-w-full flex items-center justify-center cursor-pointer touch-none"
+          className="relative w-64 h-64 md:w-[320px] md:h-[320px] sm:w-[280px] sm:h-[280px] max-w-full flex items-center justify-center cursor-pointer touch-none"
           onPointerDown={handleTap}
         >
           <div className="absolute inset-0 bg-gradient-to-b from-[#ff8a00]/10 to-[#e52e71]/10 rounded-full blur-3xl" />
@@ -193,7 +194,10 @@ export function Game() {
               </div>
               
               <button 
-                onClick={claimOfflineEarnings}
+                onClick={() => {
+                  audioManager.playCoinSound();
+                  claimOfflineEarnings();
+                }}
                 className="w-full py-4 rounded-xl bg-gradient-to-r from-[#FFD700] to-[#E6C200] text-black font-bold text-lg shadow-[0_0_20px_rgba(255,215,0,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 Claim Coins
