@@ -4,7 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import { TonConnectUIProvider } from '@tonconnect/ui-react';
 
-const manifestUrl = 'https://jamladz.github.io/Raija/tonconnect-manifest.json';
+const manifestUrl = 'https://raw.githubusercontent.com/Jamladz/Test3/main/tonconnect-manifest.json';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
