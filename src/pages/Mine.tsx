@@ -16,18 +16,18 @@ const UPGRADES = [
   { id: '108', category: 'gifts', name: 'Lonic Dryer', description: 'Req: Snoop Cigar lvl 9', baseCost: 200000, baseProfit: 75000, isImage: true, icon: 'https://i.suar.me/V9d9g/l', reqUpgrade: '107', reqLevel: 9 },
   { id: '109', category: 'gifts', name: 'Signet Ring', description: 'Req: Lonic Dryer lvl 10', baseCost: 350000, baseProfit: 140000, isImage: true, icon: 'https://i.suar.me/wzAz6/l', reqUpgrade: '108', reqLevel: 10 },
 
-  // Exchanges
-  { id: '1', category: 'markets', name: 'Binance', description: 'Tier 1 Centralized Exchange', baseCost: 500, baseProfit: 250, icon: '🔶' },
-  { id: '11', category: 'markets', name: 'Bybit', description: 'Req: Binance lvl 2', baseCost: 2000, baseProfit: 850, icon: '📈', reqUpgrade: '1', reqLevel: 2 },
-  { id: '2', category: 'markets', name: 'OKX', description: 'Req: Bybit lvl 3', baseCost: 5000, baseProfit: 3000, icon: '🌐', reqUpgrade: '11', reqLevel: 3 },
-  { id: '12', category: 'markets', name: 'HTX', description: 'Req: OKX lvl 4', baseCost: 15000, baseProfit: 6000, icon: '🔥', reqUpgrade: '2', reqLevel: 4 },
-  { id: '13', category: 'markets', name: 'KuCoin', description: 'Req: HTX lvl 5', baseCost: 45000, baseProfit: 15000, icon: '🏦', reqUpgrade: '12', reqLevel: 5 },
-  { id: '21', category: 'markets', name: 'MEXC', description: 'Req: KuCoin lvl 6', baseCost: 85000, baseProfit: 34000, icon: '📊', reqUpgrade: '13', reqLevel: 6 },
-  { id: '5', category: 'markets', name: 'Uniswap (DEX)', description: 'Req: MEXC lvl 7', baseCost: 150000, baseProfit: 60000, icon: '🦄', reqUpgrade: '21', reqLevel: 7 },
-  { id: '22', category: 'markets', name: 'PancakeSwap (DEX)', description: 'Req: Uniswap lvl 8', baseCost: 250000, baseProfit: 100000, icon: '🥞', reqUpgrade: '5', reqLevel: 8 },
-  { id: '14', category: 'markets', name: 'STON.fi (TON DEX)', description: 'Req: PancakeSwap lvl 9', baseCost: 500000, baseProfit: 200000, icon: '💎', reqUpgrade: '22', reqLevel: 9 },
-  { id: '23', category: 'markets', name: 'DeDust (TON DEX)', description: 'Req: STON.fi lvl 10', baseCost: 1000000, baseProfit: 450000, icon: '🚀', reqUpgrade: '14', reqLevel: 10 },
-  { id: '24', category: 'markets', name: 'Margin Trading', description: 'Req: 20 Ads Watched', baseCost: 35000, baseProfit: 45000, icon: '⚡', reqAds: 20 },
+  // Markets
+  { id: '1', category: 'markets', name: 'Binance', description: 'Tier 1 Centralized Exchange', baseCost: 500, baseProfit: 250, isImage: true, icon: 'https://i.suar.me/e9Ma0/l' },
+  { id: '2', category: 'markets', name: 'OKX', description: 'Req: Binance lvl 2', baseCost: 2000, baseProfit: 850, isImage: true, icon: 'https://i.suar.me/8zG6L/l', reqUpgrade: '1', reqLevel: 2 },
+  { id: '3', category: 'markets', name: 'Bybit', description: 'Req: OKX lvl 3', baseCost: 5000, baseProfit: 3000, isImage: true, icon: 'https://i.suar.me/Np2VZ/l', reqUpgrade: '2', reqLevel: 3 },
+  { id: '4', category: 'markets', name: 'Coinbase', description: 'Req: Bybit lvl 4', baseCost: 15000, baseProfit: 6000, isImage: true, icon: 'https://i.suar.me/jvMNz/l', reqUpgrade: '3', reqLevel: 4 },
+  { id: '5', category: 'markets', name: 'MEXC', description: 'Req: Coinbase lvl 5', baseCost: 45000, baseProfit: 15000, isImage: true, icon: 'https://i.suar.me/Opag8/l', reqUpgrade: '4', reqLevel: 5 },
+  { id: '6', category: 'markets', name: 'Bitget', description: 'Req: MEXC lvl 6', baseCost: 85000, baseProfit: 34000, isImage: true, icon: 'https://i.suar.me/dgM29/l', reqUpgrade: '5', reqLevel: 6 },
+  { id: '7', category: 'markets', name: 'Hyperliquid', description: 'Req: Bitget lvl 7', baseCost: 150000, baseProfit: 60000, isImage: true, icon: 'https://i.suar.me/og437/l', reqUpgrade: '6', reqLevel: 7 },
+  { id: '8', category: 'markets', name: 'Curve Finance', description: 'Req: Hyperliquid lvl 8', baseCost: 250000, baseProfit: 100000, isImage: true, icon: 'https://i.suar.me/xz5MX/l', reqUpgrade: '7', reqLevel: 8 },
+  { id: '9', category: 'markets', name: 'Uniswap', description: 'Req: 3 Friends', baseCost: 500000, baseProfit: 200000, isImage: true, icon: 'https://i.suar.me/wzA9d/l', reqFriends: 3 },
+  { id: '10', category: 'markets', name: 'PancakeSwap', description: 'Req: Uniswap lvl 5', baseCost: 1000000, baseProfit: 450000, isImage: true, icon: 'https://i.suar.me/7nGQ2/l', reqUpgrade: '9', reqLevel: 5 },
+  { id: '11', category: 'markets', name: 'STON.fi', description: 'Req: PancakeSwap lvl 8', baseCost: 2000000, baseProfit: 950000, isImage: true, icon: 'https://i.suar.me/rgZxz/l', reqUpgrade: '10', reqLevel: 8 },
   
   // PR & Team
   { id: '3', category: 'pr', name: 'PR Agency', description: 'Professional PR', baseCost: 2500, baseProfit: 1200, icon: '📰' },
@@ -113,7 +113,7 @@ export function Mine() {
             onClick={() => setActiveTab('markets')}
             className={`shrink-0 min-w-[80px] flex-1 text-center py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all ${activeTab === 'markets' ? 'bg-gradient-to-b from-[#FFD700] to-[#ccac00] text-black shadow-md' : 'text-gray-400 hover:text-white'}`}
           >
-            Exchanges
+            Markets
           </button>
           <button 
             onClick={() => setActiveTab('pr')}
@@ -181,9 +181,9 @@ export function Mine() {
                className={`glass-panel p-4 rounded-[1.25rem] flex flex-col relative overflow-hidden transition-all ${disabled ? (isLocked ? 'opacity-80 ring-1 ring-red-500/20 bg-red-500/5 cursor-pointer' : 'opacity-60 ring-1 ring-white/5') : 'active:scale-95 ring-1 ring-[#00f3ff]/30 shadow-[0_4px_20px_rgba(0,0,0,0.4)]'}`}
              >
                <div className="flex items-start w-full gap-2 mb-3 relative z-10 flex-1">
-                 <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-[#2a2a2d] to-[#1c1c1e] flex items-center justify-center text-2xl flex-shrink-0 shadow-inner border border-white/5 ${isLocked && 'filter grayscale opacity-50'}`}>
+                 <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-[#2a2a2d] to-[#1c1c1e] flex items-center justify-center text-2xl flex-shrink-0 shadow-inner border border-white/5 overflow-hidden ${isLocked && 'filter grayscale opacity-50'}`}>
                    {upgrade.isImage ? (
-                     <img src={upgrade.icon} alt={upgrade.name} className="w-[85%] h-[85%] object-contain drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]" />
+                     <img src={upgrade.icon} alt={upgrade.name} className={activeTab === 'markets' ? "w-full h-full object-cover" : (activeTab === 'gifts' ? "w-full h-full object-contain" : "w-[90%] h-[90%] object-contain drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]")} />
                    ) : (
                      <>{upgrade.icon}</>
                    )}
@@ -221,6 +221,7 @@ export function Mine() {
                  )}
                </div>
 
+               {/* Overlays (Shared) */}
                {isLocked && (
                  <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-20">
                    <div className="bg-red-500/20 p-2 rounded-full border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]">

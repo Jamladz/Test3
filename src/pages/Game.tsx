@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore } from '../store/useGameStore';
 import { formatCurrency, formatNumber } from '../lib/utils';
-import { Zap, Coins, FerrisWheel, Map, X, CheckCircle2 } from 'lucide-react';
+import { Zap, Coins, FerrisWheel, Map, X, CheckCircle2, Wallet } from 'lucide-react';
 import { audioManager } from '../lib/audio';
 
 export function Game() {
@@ -11,6 +11,7 @@ export function Game() {
   const tapIdRef = useRef(0);
   const [showRoadmap, setShowRoadmap] = useState(false);
   const [showWheel, setShowWheel] = useState(false);
+  const [showAirdropPopup, setShowAirdropPopup] = useState(false);
 
   // Energy regeneration
   useEffect(() => {
@@ -106,6 +107,16 @@ export function Game() {
           className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md flex items-center justify-center shadow-lg active:scale-95 transition-all text-[#ffaa00] hover:bg-white/10"
         >
           <FerrisWheel size={22} className="drop-shadow-[0_0_8px_rgba(255,170,0,0.8)]" />
+        </button>
+        <button 
+          onClick={() => {
+            const twa = (window as any).Telegram?.WebApp;
+            if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
+            setShowAirdropPopup(true);
+          }}
+          className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md flex items-center justify-center shadow-lg active:scale-95 transition-all text-[#ff00ea] hover:bg-white/10"
+        >
+          <Wallet size={22} className="drop-shadow-[0_0_8px_rgba(255,0,234,0.8)]" />
         </button>
       </div>
 
@@ -353,6 +364,37 @@ export function Game() {
                 className="w-full py-4 rounded-xl bg-white/10 text-white font-bold text-lg hover:bg-white/20 active:scale-95 transition-all"
               >
                 Got it
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Airdrop Popup Modal */}
+      <AnimatePresence>
+        {showAirdropPopup && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-gradient-to-b from-[#1c1c1e] to-[#0a0a0c] border border-[#00f3ff]/30 p-6 rounded-2xl flex flex-col items-center w-full max-w-sm shadow-[0_0_30px_rgba(0,243,255,0.2)]"
+            >
+              <div className="w-16 h-16 bg-[#00f3ff]/10 rounded-full flex items-center justify-center mb-4 border border-[#00f3ff]/20">
+                <Coins size={32} className="text-[#00f3ff] drop-shadow-[0_0_10px_rgba(0,243,255,0.5)]" />
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">Airdrop soon</h2>
+              <p className="text-gray-400 text-center text-sm mb-6">Stay tuned! Our massive airdrop is currently being prepared for our earliest supporters.</p>
+              <button 
+                onClick={() => setShowAirdropPopup(false)}
+                className="w-full py-3 bg-gradient-to-r from-[#00f3ff] to-[#00a8ff] text-black font-bold rounded-xl shadow-[0_0_15px_rgba(0,243,255,0.4)] hover:scale-[1.02] transition-all"
+              >
+                Got it!
               </button>
             </motion.div>
           </motion.div>
