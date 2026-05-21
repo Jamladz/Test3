@@ -28,6 +28,9 @@ export const GameService = {
     const snap = await getDoc(userRef);
     
     if (!snap.exists()) {
+      let startingBalance = 10000;
+      let validReferrer = false;
+
       // Handle Referral sign up
       if (startParam && startParam.startsWith('ref')) {
         const referrerId = startParam.replace('ref', '');
@@ -35,10 +38,7 @@ export const GameService = {
           try {
             const refDoc = doc(db, 'referrals', uid);
             await setDoc(refDoc, { userId: uid, referrerId });
-            
-            // Note: In a real Cloudflare Worker / Cloud Function, the bonus logic would be atomic.
-            // For pure client-side with our rules, we give standard new user bounds or rely on claiming later.
-            // To keep it simple and within our rules: we will let them start with 50000 
+            validReferrer = true;
           } catch(e) {
             console.error("Referral failed", e);
           }
@@ -49,7 +49,7 @@ export const GameService = {
         id: telegramId,
         username,
         firstName,
-        balance: startParam?.startsWith('ref') ? 50000 : 0,
+        balance: validReferrer ? 60000 : 10000,
         energy: 1500,
         maxEnergy: 1500,
         profitPerHour: 0,
@@ -62,10 +62,6 @@ export const GameService = {
       };
         if (username === 'sekanedr_is') {
            initialData.role = 'admin';
-           try {
-              const adminRef = doc(db, 'admins', uid);
-              await setRef(adminRef, { access: true });
-           } catch(e) {}
         }
 
       await setDoc(userRef, initialData);
