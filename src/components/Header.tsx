@@ -64,7 +64,7 @@ export function Header() {
           </div>
         </div>
 
-        <div className="flex justify-end scale-[0.85] origin-right ml-auto">
+        <div className="flex justify-end gap-2 items-center scale-[0.85] origin-right ml-auto">
           <TonConnectButton />
         </div>
       </div>
