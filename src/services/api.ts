@@ -1,6 +1,6 @@
 import { auth, db } from '../lib/firebase';
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, increment, collection, setDoc as setRef, query, where, getDocs, getCountFromServer } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, increment, collection, setDoc as setRef, query, where, getDocs, getCountFromServer, runTransaction, serverTimestamp } from 'firebase/firestore';
 
 export const AuthService = {
   // Returns a firebase user UID
@@ -25,71 +25,79 @@ export const AuthService = {
 export const GameService = {
   async fetchOrCreateUser(uid: string, telegramId: string, username: string, firstName: string, startParam?: string) {
     const userRef = doc(db, 'users', uid);
-    const snap = await getDoc(userRef);
     
-    if (!snap.exists()) {
-      let startingBalance = 10000;
-      let validReferrer = false;
+    try {
+      const resultData = await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(userRef);
 
-      // Handle Referral sign up
-      if (startParam && startParam.startsWith('ref')) {
-        const referrerId = startParam.replace('ref', '');
-        if (referrerId && referrerId !== telegramId.toString()) {
-          try {
-            const refDoc = doc(db, 'referrals', uid);
-            await setDoc(refDoc, { userId: uid, referrerId });
-            validReferrer = true;
-          } catch(e) {
-            console.error("Referral failed", e);
+        if (!snap.exists()) {
+          let startingBalance = 10000;
+          let validReferrer = false;
+          let referrerUid = null;
+
+          // Handle Referral sign up securely inside transaction
+          if (startParam && startParam.startsWith('ref')) {
+             referrerUid = startParam.replace('ref', '');
+             // Prevent self-referral
+             if (referrerUid && referrerUid !== uid) {
+                const referrerRef = doc(db, 'users', referrerUid);
+                const referrerSnap = await transaction.get(referrerRef);
+                
+                if (referrerSnap.exists()) {
+                   validReferrer = true;
+                   const rData = referrerSnap.data();
+                   
+                   // Increase referrer's balance and friend count
+                   transaction.update(referrerRef, {
+                      balance: increment(100000),
+                      friendsCount: increment(1)
+                   });
+
+                   // Save referral details for the referrer to see
+                   const refDoc = doc(db, 'referrals', uid);
+                   transaction.set(refDoc, {
+                      userId: uid,
+                      referrerId: referrerUid,
+                      telegramId: telegramId,
+                      firstName: firstName,
+                      username: username,
+                      createdAt: serverTimestamp()
+                   });
+                }
+             }
           }
+
+          const initialData = {
+            id: telegramId,
+            username,
+            firstName,
+            balance: validReferrer ? 60000 : 10000,
+            energy: 1500,
+            maxEnergy: 1500,
+            profitPerHour: 0,
+            lastLogin: Date.now(),
+            role: username === 'sekanedr_is' ? 'admin' : 'user',
+            upgrades: {},
+            missions: [],
+            friendsCount: 0,
+            adsWatched: 0,
+          };
+
+          transaction.set(userRef, initialData);
+          return initialData;
         }
-      }
 
-      const initialData = {
-        id: telegramId,
-        username,
-        firstName,
-        balance: validReferrer ? 60000 : 10000,
-        energy: 1500,
-        maxEnergy: 1500,
-        profitPerHour: 0,
-        lastLogin: Date.now(),
-        role: 'user',
-        upgrades: {},
-        missions: [],
-        friendsCount: 0,
-        adsWatched: 0,
-      };
-        if (username === 'sekanedr_is') {
-           initialData.role = 'admin';
-        }
+        return snap.data();
+      });
 
-      await setDoc(userRef, initialData);
-      return initialData;
+      return resultData;
+
+    } catch (e) {
+      console.error("Transaction failed: ", e);
+      // Fallback read if tx fails
+      const snap = await getDoc(userRef);
+      return snap.data();
     }
-    
-    // Check friend count manually since we don't have triggers
-    const refQuery = query(collection(db, 'referrals'), where('referrerId', '==', telegramId));
-    const refSnap = await getCountFromServer(refQuery);
-    const count = refSnap.data().count;
-    const data = snap.data();
-    
-    if (count > (data.friendsCount || 0)) {
-       const diff = count - (data.friendsCount || 0);
-       const bonus = diff * 100000;
-       
-       await updateDoc(userRef, { 
-           friendsCount: count,
-           balance: increment(bonus)
-       });
-       
-       if (data.balance !== undefined) {
-           data.balance += bonus;
-       }
-       data.friendsCount = count;
-    }
-
-    return data;
   },
 
   async syncState(uid: string, obj: any) {
