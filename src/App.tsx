@@ -63,7 +63,7 @@ export default function App() {
           backgroundRepeat: 'no-repeat'
         }}
       >
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
+        <div className="absolute inset-0 bg-black/20"></div>
         
         <div className="absolute bottom-16 left-0 right-0 flex flex-col items-center px-8 z-10">
           <div className="flex items-center gap-1 mb-4 text-[#a25aff] font-mono text-sm tracking-[0.2em] uppercase font-bold drop-shadow-[0_0_8px_rgba(162,90,255,0.8)]">
