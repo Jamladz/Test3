@@ -80,6 +80,7 @@ export const useGameStore = create<GameState>()(
           upgrades: data.upgrades || {},
           missions: data.missions || [],
           friendsCount: data.friendsCount || 0,
+          adsWatched: data.adsWatched || 0,
           userId,
           username
         });
@@ -130,7 +131,8 @@ export const useGameStore = create<GameState>()(
           balance: state.balance,
           energy: state.energy,
           lastLogin: Date.now(),
-          offlineEarnings: 0
+          offlineEarnings: 0,
+          adsWatched: state.adsWatched
       });
     } catch(e) {
       console.error(e);
