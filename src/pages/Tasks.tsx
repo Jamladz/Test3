@@ -104,29 +104,53 @@ export function Tasks() {
     }
   };
 
+  const [timeLeftStr, setTimeLeftStr] = React.useState("");
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      // Reset at midnight local time
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      const diff = tomorrow.getTime() - now.getTime();
+
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setTimeLeftStr(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const todayDateStr = new Date().toISOString().split("T")[0];
+  const dailyMissionId = `daily_${todayDateStr}`;
+  const isDailyDone = missions.includes(dailyMissionId);
+
+  // Compute how many ads were watched today based on missions array
+  const adsWatchedToday = missions.filter(m => m.startsWith(`ad_${todayDateStr}_`)).length;
+
   const handleWatchAd = () => {
-    if (adsWatched >= 5) return;
+    if (adsWatchedToday >= 5) return;
     const AdController = (window as any).Adsgram?.init({
       blockId: "int-30809",
     });
     if (AdController) {
       AdController.show()
         .then(async (result: any) => {
-          incrementAdsWatched(); // Mock local req increment
+          incrementAdsWatched();
           audioManager.playCoinSound();
-          await completeMissionApi(`ad_${Date.now()}`, 50000);
+          await completeMissionApi(`ad_${todayDateStr}_${Date.now()}`, 50000);
         })
         .catch((result: any) => {});
     } else {
-      incrementAdsWatched(); // Mock local req increment
+      incrementAdsWatched();
       audioManager.playCoinSound();
-      completeMissionApi(`ad_${Date.now()}`, 50000);
+      completeMissionApi(`ad_${todayDateStr}_${Date.now()}`, 50000);
     }
   };
-
-  const todayDateStr = new Date().toISOString().split("T")[0];
-  const dailyMissionId = `daily_${todayDateStr}`;
-  const isDailyDone = missions.includes(dailyMissionId);
 
   const handleDailyReward = async () => {
     if (!isDailyDone) {
@@ -159,16 +183,19 @@ export function Tasks() {
           <div>
             <h3 className="font-bold text-sm">Daily reward</h3>
             <p className="text-xs text-[#FFD700]">
-              {isDailyDone ? "Come back tomorrow" : "+20,000 Coins"}
+              {isDailyDone ? `Come back in ${timeLeftStr}` : "+20,000 Coins"}
             </p>
           </div>
         </div>
+        {isDailyDone && (
+          <CheckCircle2 className="text-[#00f3ff]" size={24} />
+        )}
       </button>
 
       <button
         onClick={handleWatchAd}
-        disabled={adsWatched >= 5}
-        className={`glass-panel p-4 rounded-2xl flex items-center justify-between mb-8 w-full block transition-transform ${adsWatched >= 5 ? "opacity-50" : "active:scale-95 ring-1 ring-[#00f3ff]/30 shadow-[0_4px_20px_rgba(0,243,255,0.15)] hover:bg-white/5"}`}
+        disabled={adsWatchedToday >= 5}
+        className={`glass-panel p-4 rounded-2xl flex items-center justify-between mb-8 w-full block transition-transform ${adsWatchedToday >= 5 ? "opacity-70" : "active:scale-95 ring-1 ring-[#00f3ff]/30 shadow-[0_4px_20px_rgba(0,243,255,0.15)] hover:bg-white/5"}`}
       >
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-gradient-to-br from-[#00f3ff]/20 to-blue-600/20 rounded-xl flex items-center justify-center text-[#00f3ff] shrink-0">
@@ -184,10 +211,13 @@ export function Tasks() {
               />
               <span>+50,000</span>
             </div>
+            {adsWatchedToday >= 5 && (
+               <div className="text-[10px] text-gray-400 mt-1">Resets in {timeLeftStr}</div>
+            )}
           </div>
         </div>
         <div className="flex flex-col items-end gap-1.5 shrink-0">
-          {adsWatched >= 5 ? (
+          {adsWatchedToday >= 5 ? (
             <CheckCircle2 className="text-[#00f3ff] mr-2" size={24} />
           ) : (
             <div className="px-5 py-2 bg-[#00f3ff] text-black rounded-full text-xs font-bold uppercase tracking-wider">
@@ -195,7 +225,7 @@ export function Tasks() {
             </div>
           )}
           <div className="text-[10px] font-bold text-gray-400 bg-white/10 px-2 py-0.5 rounded-md mr-2 text-center w-full max-w-[60px]">
-            {adsWatched}/5
+            {adsWatchedToday}/5
           </div>
         </div>
       </button>

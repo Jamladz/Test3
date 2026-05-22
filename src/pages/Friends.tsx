@@ -1,16 +1,62 @@
-import React from 'react';
-import { Gift, Copy, UserPlus, Coins } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Gift, Copy, UserPlus, Coins, User } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
 import { formatCurrency } from '../lib/utils';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+
+interface ReferralDoc {
+  userId: string;
+  firstName: string;
+  username: string;
+  createdAt: any;
+}
 
 export function Friends() {
-  const { friendsCount, userId } = useGameStore();
+  const { friendsCount, firebaseUid } = useGameStore();
+  const [friendsList, setFriendsList] = useState<ReferralDoc[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const getInviteLink = () => `https://t.me/PlushTap_bot/app?startapp=ref${userId}`;
+  const getInviteLink = () => `https://t.me/PlushTap_bot/app?startapp=ref${firebaseUid}`;
+
+  useEffect(() => {
+    if (!firebaseUid) return;
+    
+    const fetchFriends = async () => {
+      try {
+        const q = query(
+          collection(db, 'referrals'),
+          where('referrerId', '==', firebaseUid)
+        );
+        const querySnapshot = await getDocs(q);
+        const friends: ReferralDoc[] = [];
+        querySnapshot.forEach((doc) => {
+          friends.push(doc.data() as ReferralDoc);
+        });
+        
+        // Sort manually by date if available
+        friends.sort((a, b) => {
+           const timeA = a.createdAt?.seconds || 0;
+           const timeB = b.createdAt?.seconds || 0;
+           return timeB - timeA;
+        });
+
+        setFriendsList(friends);
+      } catch (error) {
+        console.error("Error fetching friends:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFriends();
+  }, [firebaseUid]);
+
+  const displayCount = isLoading ? friendsCount : friendsList.length;
 
   const handleInvite = () => {
     const twa = (window as any).Telegram?.WebApp;
-    const shortLink = `https://t.me/PlushTap_bot/app?startapp=ref${userId}`;
+    const shortLink = getInviteLink();
     const text = encodeURIComponent('Join me and get 60,000 Pepe coins as a welcome bonus!');
     
     if (twa) {
@@ -22,7 +68,7 @@ export function Friends() {
   };
 
   const handleCopy = () => {
-    const shortLink = `https://t.me/PlushTap_bot/app?startapp=ref${userId}`;
+    const shortLink = getInviteLink();
     navigator.clipboard.writeText(shortLink);
     const twa = (window as any).Telegram?.WebApp;
     if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
@@ -52,17 +98,41 @@ export function Friends() {
 
       <div className="flex justify-between items-end mb-4 px-1">
         <h2 className="font-bold text-lg leading-none">Your friends</h2>
-        <span className="text-gray-400 text-sm font-medium">{friendsCount} {friendsCount === 1 ? 'friend' : 'friends'}</span>
+        <span className="text-gray-400 text-sm font-medium">{displayCount} {displayCount === 1 ? 'friend' : 'friends'}</span>
       </div>
       
-      {friendsCount === 0 ? (
+      {isLoading ? (
+        <div className="glass-panel p-10 rounded-[1.5rem] text-center mb-8 bg-white/5 border border-white/5 shadow-inner shrink-0 flex justify-center items-center">
+            <div className="w-8 h-8 rounded-full border-2 border-[#00f3ff] border-t-transparent animate-spin" />
+        </div>
+      ) : friendsList.length === 0 ? (
         <div className="glass-panel p-10 rounded-[1.5rem] text-center mb-8 bg-white/5 border border-white/5 shadow-inner shrink-0">
           <p className="text-gray-400 font-medium text-sm">You haven't invited anyone yet</p>
         </div>
       ) : (
-        <div className="glass-panel p-6 rounded-[1.5rem] mb-8 bg-white/5 border border-[#FFD700]/20 shadow-inner shrink-0 flex items-center justify-center gap-3">
-          <UserPlus className="text-[#FFD700]" size={24} />
-          <span className="text-lg font-bold">You invited {friendsCount} {friendsCount === 1 ? 'friend' : 'friends'}!</span>
+        <div className="flex flex-col gap-3 mb-8 shrink-0">
+          {friendsList.map((friend, idx) => (
+             <div key={idx} className="glass-panel p-4 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1c1c1e] to-[#2a2a2d] border border-white/10 flex items-center justify-center text-gray-400">
+                    <User size={20} />
+                  </div>
+                  <div className="flex flex-col">
+                     <span className="text-white font-bold text-sm">
+                       {friend.firstName || friend.username || 'Anonymous User'}
+                     </span>
+                     {friend.username && (
+                       <span className="text-gray-400 text-xs mt-0.5">@{friend.username}</span>
+                     )}
+                  </div>
+                </div>
+                
+                <div className="text-[#FFD700] font-mono text-sm font-bold flex items-center gap-1">
+                  <img src="https://i.suar.me/qv4lV/l" alt="Coin" className="w-3.5 h-3.5 object-contain" />
+                  +100k
+                </div>
+             </div>
+          ))}
         </div>
       )}
 

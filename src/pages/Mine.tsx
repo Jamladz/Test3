@@ -183,7 +183,7 @@ export function Mine() {
                <div className="flex items-start w-full gap-2 mb-3 relative z-10 flex-1">
                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-[#2a2a2d] to-[#1c1c1e] flex items-center justify-center text-2xl flex-shrink-0 shadow-inner border border-white/5 overflow-hidden ${isLocked && 'filter grayscale opacity-50'}`}>
                    {upgrade.isImage ? (
-                     <img src={upgrade.icon} alt={upgrade.name} className={activeTab === 'markets' ? "w-full h-full object-cover" : (activeTab === 'gifts' ? "w-full h-full object-contain" : "w-[90%] h-[90%] object-contain drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]")} />
+                     <img src={upgrade.icon} alt={upgrade.name} className={activeTab === 'markets' || activeTab === 'gifts' ? "w-full h-full object-cover" : "w-[90%] h-[90%] object-contain drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]"} />
                    ) : (
                      <>{upgrade.icon}</>
                    )}
