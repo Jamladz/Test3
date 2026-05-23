@@ -13,14 +13,35 @@ export function useTelegramAutoLogin() {
       twa.setHeaderColor('#000000');
       twa.setBackgroundColor('#000000');
 
+      let start_param = twa.initDataUnsafe?.start_param;
+      
+      // Fallbacks for start_param if it is not present in initDataUnsafe
+      if (!start_param) {
+         const searchParams = new URLSearchParams(window.location.search);
+         const hashParams = new URLSearchParams(window.location.hash.slice(1)); // Some TWA params get passed in hash
+         
+         start_param = searchParams.get('start_param') || 
+                       searchParams.get('tgWebAppStartParam') || 
+                       searchParams.get('startapp') ||
+                       hashParams.get('start_param') ||
+                       hashParams.get('tgWebAppStartParam') ||
+                       hashParams.get('startapp') ||
+                       undefined;
+      }
+
       if (twa.initDataUnsafe?.user) {
         setUser({
           ...twa.initDataUnsafe.user,
-          start_param: twa.initDataUnsafe.start_param
+          start_param
         });
       } else {
         // Mock user for local dev
-        setUser({ id: 12345, username: 'test_user', first_name: 'Test', start_param: new URLSearchParams(window.location.search).get('start_param') || undefined });
+        setUser({ 
+           id: 12345, 
+           username: 'test_user', 
+           first_name: 'Test', 
+           start_param 
+        });
       }
     } else {
       // Mock user for local dev outside Telegram
