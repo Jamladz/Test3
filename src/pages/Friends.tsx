@@ -13,20 +13,20 @@ interface ReferralDoc {
 }
 
 export function Friends() {
-  const { friendsCount, firebaseUid } = useGameStore();
+  const { friendsCount, userId } = useGameStore();
   const [friendsList, setFriendsList] = useState<ReferralDoc[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const getInviteLink = () => `https://t.me/PlushTap_bot/app?startapp=ref${firebaseUid}`;
+  const getInviteLink = () => `https://t.me/PlushTap_bot?startapp=ref${userId}`;
 
   useEffect(() => {
-    if (!firebaseUid) return;
+    if (!userId) return;
     
     const fetchFriends = async () => {
       try {
         const q = query(
           collection(db, 'referrals'),
-          where('referrerId', '==', firebaseUid)
+          where('referrerTelegramId', '==', userId.toString())
         );
         const querySnapshot = await getDocs(q);
         const friends: ReferralDoc[] = [];
