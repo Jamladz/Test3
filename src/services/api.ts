@@ -29,44 +29,46 @@ export const GameService = {
     try {
       const resultData = await runTransaction(db, async (transaction) => {
         const snap = await transaction.get(userRef);
+        let userData = snap.exists() ? snap.data() : null;
+
+        let validReferrer = false;
+        let referrerUid = null;
+
+        // Handle Referral logic
+        if (startParam && startParam.startsWith('ref')) {
+           referrerUid = startParam.replace('ref', '');
+           
+           // Ensure not self-referral, and user isn't already referred
+           const alreadyReferred = userData?.referredBy != null;
+           
+           if (referrerUid && referrerUid !== uid && !alreadyReferred) {
+              const referrerRef = doc(db, 'users', referrerUid);
+              const referrerSnap = await transaction.get(referrerRef);
+              
+              if (referrerSnap.exists()) {
+                 validReferrer = true;
+                 
+                 // Increase referrer's balance and friend count
+                 transaction.update(referrerRef, {
+                    balance: increment(100000),
+                    friendsCount: increment(1)
+                 });
+
+                 // Save referral details for the referrer to see
+                 const refDoc = doc(db, 'referrals', uid);
+                 transaction.set(refDoc, {
+                    userId: uid,
+                    referrerId: referrerUid,
+                    telegramId: telegramId,
+                    firstName: firstName,
+                    username: username,
+                    createdAt: serverTimestamp()
+                 });
+              }
+           }
+        }
 
         if (!snap.exists()) {
-          let startingBalance = 10000;
-          let validReferrer = false;
-          let referrerUid = null;
-
-          // Handle Referral sign up securely inside transaction
-          if (startParam && startParam.startsWith('ref')) {
-             referrerUid = startParam.replace('ref', '');
-             // Prevent self-referral
-             if (referrerUid && referrerUid !== uid) {
-                const referrerRef = doc(db, 'users', referrerUid);
-                const referrerSnap = await transaction.get(referrerRef);
-                
-                if (referrerSnap.exists()) {
-                   validReferrer = true;
-                   const rData = referrerSnap.data();
-                   
-                   // Increase referrer's balance and friend count
-                   transaction.update(referrerRef, {
-                      balance: increment(100000),
-                      friendsCount: increment(1)
-                   });
-
-                   // Save referral details for the referrer to see
-                   const refDoc = doc(db, 'referrals', uid);
-                   transaction.set(refDoc, {
-                      userId: uid,
-                      referrerId: referrerUid,
-                      telegramId: telegramId,
-                      firstName: firstName,
-                      username: username,
-                      createdAt: serverTimestamp()
-                   });
-                }
-             }
-          }
-
           const initialData = {
             id: telegramId,
             username,
@@ -81,13 +83,24 @@ export const GameService = {
             missions: [],
             friendsCount: 0,
             adsWatched: 0,
+            referredBy: validReferrer ? referrerUid : null
           };
 
           transaction.set(userRef, initialData);
           return initialData;
+        } else {
+          // If the user already existed but we just processed a new valid referral for them
+          if (validReferrer) {
+             const updatedBalance = (userData.balance || 0) + 50000; // 60k instead of 10k -> difference is 50k
+             transaction.update(userRef, {
+                referredBy: referrerUid,
+                balance: updatedBalance
+             });
+             userData.referredBy = referrerUid;
+             userData.balance = updatedBalance;
+          }
+          return userData;
         }
-
-        return snap.data();
       });
 
       return resultData;
