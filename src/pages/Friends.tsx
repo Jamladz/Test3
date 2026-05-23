@@ -50,7 +50,7 @@ export function Friends() {
     };
 
     fetchFriends();
-  }, [firebaseUid]);
+  }, [userId]);
 
   const displayCount = isLoading ? friendsCount : friendsList.length;
 
