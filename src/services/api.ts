@@ -80,7 +80,7 @@ export const GameService = {
         }
 
         if (!snap.exists()) {
-          const initialData = {
+          const initialData: any = {
             id: telegramId.toString(),
             username: username || '',
             firstName: firstName || 'Anonymous',
@@ -98,6 +98,10 @@ export const GameService = {
             referralRewardClaimed: validReferrer
           };
 
+          if (validReferrer) {
+              initialData._justReferred = true;
+          }
+
           transaction.set(userRef, initialData);
           return initialData;
         } else {
@@ -113,6 +117,7 @@ export const GameService = {
                userData.referredBy = referrerTelegramId;
                userData.referralRewardClaimed = true;
                userData.balance = updatedBalance;
+               userData._justReferred = true;
              }
           }
           return userData;
@@ -129,11 +134,40 @@ export const GameService = {
     }
   },
 
-  async syncState(uid: string, obj: any) {
+  async syncState(uid: string, deltas: any) {
     const userRef = doc(db, 'users', uid);
-    // Remove transient field offlineEarnings
-    const { offlineEarnings, ...rest } = obj; 
-    await updateDoc(userRef, rest);
+    
+    try {
+      const resultData = await runTransaction(db, async (transaction) => {
+          const snap = await transaction.get(userRef);
+          if (!snap.exists()) return null;
+          
+          const data = snap.data();
+          
+          // Calculate new balance securely using the delta
+          const balanceDelta = deltas.balanceDelta || 0;
+          const newBalance = Math.max(0, (data.balance || 0) + balanceDelta);
+          
+          // Allow friendsCount to only go up or stay same
+          const currentAds = data.adsWatched || 0;
+          const newAds = Math.max(currentAds, deltas.adsWatched || 0);
+
+          const updates: any = {
+              balance: newBalance,
+              energy: deltas.energy ?? data.energy,
+              lastLogin: deltas.lastLogin || Date.now(),
+              adsWatched: newAds
+          };
+
+          transaction.update(userRef, updates);
+          
+          return { ...data, ...updates };
+      });
+      return resultData;
+    } catch (e) {
+      console.error("Sync Transaction failed: ", e);
+      return null;
+    }
   },
 
   async addBalance(uid: string, amount: number, fieldsToUpdate: any = {}) {
@@ -158,12 +192,16 @@ export const GameService = {
     const usersSnap = await getDocs(collection(db, 'users'));
     let totalEconomy = 0;
     let bannedBots = 0;
+    const usersList: any[] = [];
     usersSnap.forEach(doc => {
        const u = doc.data();
        totalEconomy += (u.balance || 0);
        if (u.role === 'banned') bannedBots++;
+       usersList.push(u);
     });
-    return { totalUsers: usersSnap.size, totalEconomy, bannedBots };
+    // Sort users by balance descended
+    usersList.sort((a,b) => (b.balance || 0) - (a.balance || 0));
+    return { totalUsers: usersSnap.size, totalEconomy, bannedBots, users: usersList };
   },
 
   async updateWallet(uid: string, address: string) {
