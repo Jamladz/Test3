@@ -27,7 +27,7 @@ const mockEconomyData = [
 
 export function Admin() {
   const { username } = useGameStore();
-  const [stats, setStats] = useState({ totalUsers: 0, totalEconomy: 0, bannedBots: 0 });
+  const [stats, setStats] = useState({ totalUsers: 0, totalEconomy: 0, bannedBots: 0, users: [] as any[] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -231,6 +231,64 @@ export function Admin() {
             </button>
           </div>
         </div>
+
+        {/* Players List */}
+        <h2 className="font-bold text-sm tracking-widest text-gray-400 mt-6 mb-2">TELEGRAM PLAYERS DIRECTORY</h2>
+        <div className="bg-[#151518] border border-white/5 rounded-2xl relative overflow-hidden flex flex-col max-h-[400px]">
+          <div className="flex justify-between items-center px-5 py-4 border-b border-white/5 bg-[#111114]">
+             <h3 className="text-sm font-bold tracking-wide">Player Database</h3>
+             <span className="text-[10px] text-gray-500 font-mono">{stats.users.length} RECORDS</span>
+          </div>
+          <div className="overflow-y-auto custom-scroll w-full flex-1">
+             <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-[#1a1a20] sticky top-0 z-10 text-[10px] uppercase font-mono tracking-widest text-gray-400 border-b border-white/5">
+                   <tr>
+                      <th className="px-5 py-3 font-medium">Player</th>
+                      <th className="px-5 py-3 font-medium">Telegram ID</th>
+                      <th className="px-5 py-3 font-medium text-right">Balance</th>
+                      <th className="px-5 py-3 font-medium text-right">Action</th>
+                   </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                   {stats.users.map((u, i) => (
+                      <tr key={u.id || i} className="hover:bg-white/[0.02] transition-colors">
+                         <td className="px-5 py-3">
+                            <div className="flex items-center gap-3">
+                               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00f3ff]/20 to-blue-600/20 flex items-center justify-center flex-shrink-0 text-white font-bold text-xs ring-1 ring-white/10">
+                                  {u.firstName?.[0] || '?'}
+                               </div>
+                               <div>
+                                  <div className="font-bold text-white truncate max-w-[120px]">{u.firstName}</div>
+                                  <div className="text-[10px] text-gray-500 font-mono">@{u.username || 'unknown'}</div>
+                               </div>
+                            </div>
+                         </td>
+                         <td className="px-5 py-3 text-gray-400 font-mono text-xs">{u.id}</td>
+                         <td className="px-5 py-3 text-right">
+                            <div className="font-bold text-[#FFD700] flex items-center justify-end gap-1.5">
+                               <Coins size={12} />
+                               {formatCurrency(u.balance || 0)}
+                            </div>
+                         </td>
+                         <td className="px-5 py-3 text-right">
+                            <button className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white text-[10px] font-bold uppercase tracking-wider transition-colors border border-white/10 active:scale-95">
+                               View
+                            </button>
+                         </td>
+                      </tr>
+                   ))}
+                   {stats.users.length === 0 && (
+                      <tr>
+                         <td colSpan={4} className="px-5 py-8 text-center text-gray-500 text-sm">
+                            {loading ? 'Scanning database...' : 'No players found'}
+                         </td>
+                      </tr>
+                   )}
+                </tbody>
+             </table>
+          </div>
+        </div>
+        <div className="h-6"></div>
 
       </div>
 
