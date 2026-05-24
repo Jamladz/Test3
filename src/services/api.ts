@@ -82,8 +82,8 @@ export const GameService = {
         if (!snap.exists()) {
           const initialData = {
             id: telegramId.toString(),
-            username,
-            firstName,
+            username: username || '',
+            firstName: firstName || 'Anonymous',
             balance: validReferrer ? 60000 : 10000,
             energy: 1500,
             maxEnergy: 1500,
