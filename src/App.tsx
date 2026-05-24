@@ -8,6 +8,7 @@ import { Mine } from './pages/Mine';
 import { Friends } from './pages/Friends';
 import { Tasks } from './pages/Tasks';
 import { Admin } from './pages/Admin';
+import { ReferralSuccessModal } from './components/ReferralSuccessModal';
 
 export default function App() {
   const user = useTelegramAutoLogin();
@@ -107,6 +108,8 @@ export default function App() {
 
         <Navigation currentTab={currentTab} setTab={setCurrentTab} isAdmin={role === 'admin'} />
       </div>
+      
+      <ReferralSuccessModal />
     </div>
   );
 }
