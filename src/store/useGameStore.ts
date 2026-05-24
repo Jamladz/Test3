@@ -32,12 +32,16 @@ interface GameState {
   completeMissionApi: (missionId: string, reward: number) => Promise<void>;
   offlineEarnings: number;
   claimOfflineEarnings: () => void;
+  justReferred: boolean;
+  clearJustReferred: () => void;
+  syncedBalance: number;
 }
 
 export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
   balance: 0,
+  syncedBalance: 0,
   energy: 1500,
   maxEnergy: 1500,
   profitPerHour: 0,
@@ -53,7 +57,9 @@ export const useGameStore = create<GameState>()(
   adsWatched: 0,
   cooldowns: {},
   offlineEarnings: 0,
+  justReferred: false,
 
+  clearJustReferred: () => set({ justReferred: false }),
   incrementAdsWatched: () => set((state) => ({ adsWatched: state.adsWatched + 1 })),
   incrementFriends: () => set((state) => ({ friendsCount: state.friendsCount + 1 })),
   setCooldown: (id, time) => set((state) => ({ cooldowns: { ...state.cooldowns, [id]: time } })),
@@ -73,6 +79,7 @@ export const useGameStore = create<GameState>()(
       } else {
         set({
           balance: data.balance || 0,
+          syncedBalance: data.balance || 0,
           energy: Math.min(data.energy || 1500, Math.max(currentState.maxEnergy || 1500, currentState.energy)),
           profitPerHour: data.profitPerHour || 0,
           lastLogin: data.lastLogin || Date.now(),
@@ -82,10 +89,10 @@ export const useGameStore = create<GameState>()(
           friendsCount: data.friendsCount || 0,
           adsWatched: data.adsWatched || 0,
           userId,
-          username
+          username,
+          justReferred: !!data._justReferred
         });
         get().updateFromOffline();
-        get().sync();
       }
     } catch(e) {
       console.error(e);
@@ -127,13 +134,23 @@ export const useGameStore = create<GameState>()(
     const state = get();
     if (!state.firebaseUid) return;
     try {
-      await GameService.syncState(state.firebaseUid, {
-          balance: state.balance,
+      const balanceDelta = Math.max(0, state.balance - state.syncedBalance);
+      
+      const result = await GameService.syncState(state.firebaseUid, {
+          balanceDelta,
           energy: state.energy,
           lastLogin: Date.now(),
-          offlineEarnings: 0,
           adsWatched: state.adsWatched
       });
+      
+      if (result) {
+         // Update our local state with the server's truth
+         set({
+            balance: result.balance,
+            syncedBalance: result.balance,
+            friendsCount: result.friendsCount || state.friendsCount
+         });
+      }
     } catch(e) {
       console.error(e);
     }
