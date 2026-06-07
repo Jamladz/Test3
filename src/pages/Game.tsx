@@ -72,10 +72,19 @@ export function Game() {
   const energyPercentage = (energy / maxEnergy) * 100;
 
   return (
-    <div className="flex flex-col items-center flex-1 w-full px-4 pt-0 pb-1 relative select-none min-h-0 overflow-y-auto no-scrollbar">
+    <div 
+      className="flex flex-col items-center flex-1 w-full px-4 pt-0 pb-1 relative select-none min-h-0 overflow-y-auto no-scrollbar"
+      style={{
+        backgroundImage: 'url("https://i.suar.me/3zzxd/l")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center -180px',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <div className="absolute inset-0 bg-black/30 w-full h-full pointer-events-none z-0" />
       
       {/* Header Balance Area */}
-      <div className="flex flex-col items-center justify-center w-full pt-1 pb-1 shrink-0">
+      <div className="flex flex-col items-center justify-center w-full pt-1 pb-1 shrink-0 z-10">
         <div className="flex items-center justify-center gap-3 h-12 w-full">
           <div className="w-10 h-10 flex items-center justify-center shrink-0">
             <img src="https://i.suar.me/qv4lV/l" alt="Coin" className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(255,215,0,0.4)]" />
