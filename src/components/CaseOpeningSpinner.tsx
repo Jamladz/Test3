@@ -36,6 +36,7 @@ export function CaseOpeningSpinner({ onClose }: CaseOpeningSpinnerProps) {
   const [items, setItems] = useState<any[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState(0);
+  const [timeLeft, setTimeLeft] = useState<string>("");
   
   const ITEM_WIDTH = 100;
   
@@ -43,6 +44,35 @@ export function CaseOpeningSpinner({ onClose }: CaseOpeningSpinnerProps) {
     checkSpinReset();
     generateItems();
   }, []);
+
+  useEffect(() => {
+    if (spinsLeft > 0) {
+      setTimeLeft("");
+      return;
+    }
+
+    const updateTimer = () => {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setUTCHours(24, 0, 0, 0);
+      
+      const diff = tomorrow.getTime() - now.getTime();
+      if (diff <= 0) {
+        checkSpinReset();
+        return;
+      }
+      
+      const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const m = Math.floor((diff / 1000 / 60) % 60);
+      const s = Math.floor((diff / 1000) % 60);
+      
+      setTimeLeft(`${h}h ${m}m ${s}s`);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [spinsLeft, checkSpinReset]);
 
   const generateItems = () => {
     const newItems = [];
@@ -167,10 +197,7 @@ export function CaseOpeningSpinner({ onClose }: CaseOpeningSpinnerProps) {
                   <img src={item.img} alt="item" className={`w-full h-full object-cover scale-110 ${item.type === 'coin' ? 'drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]' : ''}`} />
                 </div>
                 {item.type === 'coin' && (
-                  <span className="text-xs font-bold text-[#FFD700]">+{item.value.toLocaleString()}</span>
-                )}
-                {item.type === 'filler' && (
-                  <span className="text-[10px] text-gray-500 uppercase tracking-widest">Item</span>
+                  <span className="text-xs font-bold text-[#FFD700] absolute bottom-1">+{item.value.toLocaleString()}</span>
                 )}
               </div>
             ))}
@@ -205,13 +232,18 @@ export function CaseOpeningSpinner({ onClose }: CaseOpeningSpinnerProps) {
         <button 
           onClick={handleSpin}
           disabled={spinning || spinsLeft <= 0}
-          className="w-full mt-6 py-4 rounded-xl bg-gradient-to-r from-[#FFD700] to-[#F59E0B] text-black font-bold text-lg hover:brightness-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,215,0,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full mt-6 py-4 rounded-xl bg-gradient-to-r from-[#FFD700] to-[#F59E0B] text-black font-bold text-lg hover:brightness-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,215,0,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 flex-col h-[72px]"
         >
-          {spinsLeft <= 0 ? "No spins left today" : (
-             <>
+          {spinsLeft <= 0 ? (
+            <>
+              <span className="text-sm">Available in</span>
+              <span className="font-mono text-xl">{timeLeft}</span>
+            </>
+          ) : (
+             <div className="flex items-center gap-2">
                 <Play size={20} fill="currentColor" />
                 Spin & Watch Ad
-             </>
+             </div>
           )}
         </button>
       </motion.div>

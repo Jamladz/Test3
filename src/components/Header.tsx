@@ -1,13 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { formatCurrency } from '../lib/utils';
 import { Settings, Coins } from 'lucide-react';
 import { TonConnectButton, useTonWallet } from '@tonconnect/ui-react';
 import { GameService } from '../services/api';
+import { ProfileModal } from './ProfileModal';
+import { AnimatePresence } from 'motion/react';
 
 export function Header() {
   const { profitPerHour, username, firebaseUid, balance } = useGameStore();
   const wallet = useTonWallet();
+  const [showProfile, setShowProfile] = useState(false);
 
   const LEVELS = [
     { name: 'Bronze', min: 0 },
@@ -40,6 +43,7 @@ export function Header() {
   }, [wallet, firebaseUid]);
 
   return (
+    <>
     <div className="flex flex-col gap-2 p-3 pt-1 mb-0 z-10 relative shrink-0">
       <div className="flex justify-between items-center w-full">
         <div className="flex items-center gap-3">
@@ -49,7 +53,7 @@ export function Header() {
             </div>
           </div>
           <div className="flex flex-col min-w-[80px]">
-            <h2 className="font-bold text-xs tracking-wide text-white truncate">{username || 'Player1'}</h2>
+            <h2 onClick={() => setShowProfile(true)} className="font-bold text-xs tracking-wide text-white truncate cursor-pointer hover:text-[#00f3ff] transition-colors">{username || 'Player1'}</h2>
             {/* Level progress bar */}
             <div className="flex items-center justify-between mt-1 gap-2">
                <span className="text-[10px] font-bold text-gray-400 capitalize">{currentLevel.name}</span>
@@ -81,5 +85,12 @@ export function Header() {
         </div>
       </div>
     </div>
+    
+    <AnimatePresence>
+       {showProfile && (
+           <ProfileModal onClose={() => setShowProfile(false)} />
+       )}
+    </AnimatePresence>
+    </>
   );
 }
