@@ -77,7 +77,7 @@ export function Game() {
       style={{
         backgroundImage: 'url("https://i.suar.me/3zzxd/l")',
         backgroundSize: 'cover',
-        backgroundPosition: 'center -180px',
+        backgroundPosition: 'center -140px',
         backgroundRepeat: 'no-repeat'
       }}
     >
