@@ -37,6 +37,7 @@ interface GameState {
   syncedBalance: number;
   spinsLeft: number;
   lastSpinReset: number;
+  totalSpins: number;
   useSpin: () => void;
   checkSpinReset: () => void;
 }
@@ -64,8 +65,12 @@ export const useGameStore = create<GameState>()(
   justReferred: false,
   spinsLeft: 3,
   lastSpinReset: Date.now(),
+  totalSpins: 0,
 
-  useSpin: () => set((state) => ({ spinsLeft: Math.max(0, state.spinsLeft - 1) })),
+  useSpin: () => set((state) => ({ 
+    spinsLeft: Math.max(0, state.spinsLeft - 1),
+    totalSpins: state.totalSpins + 1 
+  })),
   checkSpinReset: () => set((state) => {
     const now = Date.now();
     const isNewDay = new Date(now).getUTCDate() !== new Date(state.lastSpinReset).getUTCDate();
