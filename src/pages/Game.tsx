@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore } from '../store/useGameStore';
 import { formatCurrency, formatNumber } from '../lib/utils';
-import { Zap, Coins, FerrisWheel, Map, X, CheckCircle2, Wallet } from 'lucide-react';
+import { Zap, Coins, FerrisWheel, Map, X, CheckCircle2, Wallet, Vault } from 'lucide-react';
 import { audioManager } from '../lib/audio';
+import { CaseOpeningSpinner } from '../components/CaseOpeningSpinner';
 
 export function Game() {
   const { balance, energy, maxEnergy, tapMultiplier, addBalance, reduceEnergy, increaseEnergy, offlineEarnings, claimOfflineEarnings } = useGameStore();
@@ -12,6 +13,7 @@ export function Game() {
   const [showRoadmap, setShowRoadmap] = useState(false);
   const [showWheel, setShowWheel] = useState(false);
   const [showAirdropPopup, setShowAirdropPopup] = useState(false);
+  const [showVaultPopup, setShowVaultPopup] = useState(false);
 
   // Energy regeneration
   useEffect(() => {
@@ -126,6 +128,16 @@ export function Game() {
           className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md flex items-center justify-center shadow-lg active:scale-95 transition-all text-[#ff00ea] hover:bg-white/10"
         >
           <Wallet size={22} className="drop-shadow-[0_0_8px_rgba(255,0,234,0.8)]" />
+        </button>
+        <button 
+          onClick={() => {
+            const twa = (window as any).Telegram?.WebApp;
+            if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
+            setShowVaultPopup(true);
+          }}
+          className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md flex items-center justify-center shadow-lg active:scale-95 transition-all text-[#00f3ff] hover:bg-white/10"
+        >
+          <Vault size={22} className="drop-shadow-[0_0_8px_rgba(0,243,255,0.8)]" />
         </button>
       </div>
 
@@ -340,42 +352,7 @@ export function Game() {
       {/* Wheel of Fortune Modal */}
       <AnimatePresence>
         {showWheel && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="bg-[#1c1c1e] border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative overflow-hidden text-center"
-            >
-              <button 
-                onClick={() => setShowWheel(false)}
-                className="absolute top-4 right-4 text-white/50 hover:text-white"
-              >
-                <X size={24} />
-              </button>
-              
-              <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[#ffaa00]/20 to-transparent pointer-events-none" />
-              
-              <div className="mx-auto w-24 h-24 mb-4 relative flex items-center justify-center">
-                <FerrisWheel size={80} className="text-[#ffaa00] animate-[spin_6s_linear_infinite] drop-shadow-[0_0_15px_rgba(255,170,0,0.4)]" />
-              </div>
-              
-              <h2 className="text-2xl font-bold text-white mb-2">Wheel of Fortune</h2>
-              <p className="text-gray-400 text-sm mb-6">Test your luck to win huge daily rewards! The Wheel of Fortune is currently under construction and will be unlocked soon.</p>
-              
-              <button 
-                onClick={() => setShowWheel(false)}
-                className="w-full py-4 rounded-xl bg-white/10 text-white font-bold text-lg hover:bg-white/20 active:scale-95 transition-all"
-              >
-                Got it
-              </button>
-            </motion.div>
-          </motion.div>
+           <CaseOpeningSpinner onClose={() => setShowWheel(false)} />
         )}
       </AnimatePresence>
 
@@ -386,24 +363,102 @@ export function Game() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
           >
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-gradient-to-b from-[#1c1c1e] to-[#0a0a0c] border border-[#00f3ff]/30 p-6 rounded-2xl flex flex-col items-center w-full max-w-sm shadow-[0_0_30px_rgba(0,243,255,0.2)]"
+              className="bg-[#1c1c1e] border border-white/10 p-6 rounded-3xl flex flex-col items-center w-full max-w-sm shadow-2xl relative"
             >
-              <div className="w-16 h-16 bg-[#00f3ff]/10 rounded-full flex items-center justify-center mb-4 border border-[#00f3ff]/20">
-                <Coins size={32} className="text-[#00f3ff] drop-shadow-[0_0_10px_rgba(0,243,255,0.5)]" />
-              </div>
-              <h2 className="text-xl font-bold text-white mb-2">Airdrop soon</h2>
-              <p className="text-gray-400 text-center text-sm mb-6">Stay tuned! Our massive airdrop is currently being prepared for our earliest supporters.</p>
               <button 
                 onClick={() => setShowAirdropPopup(false)}
-                className="w-full py-3 bg-gradient-to-r from-[#00f3ff] to-[#00a8ff] text-black font-bold rounded-xl shadow-[0_0_15px_rgba(0,243,255,0.4)] hover:scale-[1.02] transition-all"
+                className="absolute top-4 right-4 text-white/50 hover:text-white"
               >
-                Got it!
+                <X size={24} />
+              </button>
+              
+              <div className="w-20 h-20 bg-gradient-to-tr from-[#00f3ff]/20 to-[#ff00ea]/20 rounded-full flex items-center justify-center mb-6 border border-white/10 shadow-[0_0_30px_rgba(255,0,234,0.3)]">
+                <Wallet size={36} className="text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
+              </div>
+              
+              <h2 className="text-2xl font-bold text-white mb-2">Airdrop Balance</h2>
+              
+              <div className="flex flex-col items-center justify-center bg-black/40 border border-white/5 rounded-2xl w-full p-6 mb-6">
+                 <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#00f3ff] to-[#ff00ea] drop-shadow-[0_0_10px_rgba(255,0,234,0.3)] mb-2">
+                    {(balance / 10000000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                 </div>
+                 <span className="text-xs text-white/50 uppercase tracking-widest font-bold">Plush Tokens</span>
+                 <div className="mt-4 text-[11px] text-white/40 text-center">
+                   Rate: 1,000,000,000 Coins = 100 Tokens
+                 </div>
+              </div>
+
+              <button 
+                onClick={(e) => {
+                  const target = e.currentTarget;
+                  target.innerText = "Coming Soon...";
+                  target.classList.add("opacity-50", "cursor-not-allowed");
+                  setTimeout(() => {
+                    target.innerText = "Withdraw";
+                    target.classList.remove("opacity-50", "cursor-not-allowed");
+                  }, 2000);
+                }}
+                className="w-full py-4 bg-gradient-to-r from-[#00f3ff] to-[#ff00ea] text-white font-bold rounded-xl shadow-[0_0_15px_rgba(255,0,234,0.4)] hover:brightness-110 active:scale-95 transition-all mb-3 text-lg"
+              >
+                Withdraw
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Vault Popup Modal */}
+      <AnimatePresence>
+        {showVaultPopup && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-[#1c1c1e] border border-white/10 p-6 rounded-3xl flex flex-col w-full max-w-sm shadow-2xl relative"
+            >
+              <button 
+                onClick={() => setShowVaultPopup(false)}
+                className="absolute top-4 right-4 text-white/50 hover:text-white"
+              >
+                <X size={24} />
+              </button>
+              
+              <div className="w-20 h-20 bg-gradient-to-tr from-[#00f3ff]/20 to-[#00f3ff]/20 rounded-full flex items-center justify-center mb-6 mx-auto border border-white/10 shadow-[0_0_30px_rgba(0,243,255,0.3)]">
+                <Vault size={36} className="text-[#00f3ff] drop-shadow-[0_0_10px_rgba(0,243,255,0.8)]" />
+              </div>
+              
+              <h2 className="text-2xl font-bold text-white mb-2 text-center">Tokenomics</h2>
+              
+              <div className="flex flex-col bg-black/40 border border-white/5 rounded-2xl w-full p-6 mb-4">
+                 <span className="text-xs text-white/50 w-full text-left uppercase tracking-widest font-bold mb-1">Total Supply</span>
+                 <div className="text-2xl font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+                    100,000,000 <span className="text-[#00f3ff]">$PLUSH</span>
+                 </div>
+              </div>
+
+              <div className="bg-[#00f3ff]/10 border border-[#00f3ff]/20 rounded-2xl p-4 mb-6">
+                <p className="text-sm text-white/80 leading-relaxed text-center">
+                  Get ready! The <strong className="text-[#00f3ff]">$PLUSH</strong> token will soon be officially listed on top centralized (CEX) and decentralized exchanges (DEX). Keep tapping!
+                </p>
+              </div>
+
+              <button 
+                onClick={() => setShowVaultPopup(false)}
+                className="w-full py-4 bg-gradient-to-r from-[#00f3ff] to-[#00a8ff] text-white font-bold rounded-xl shadow-[0_0_15px_rgba(0,243,255,0.4)] hover:brightness-110 active:scale-95 transition-all text-lg"
+              >
+                Awesome!
               </button>
             </motion.div>
           </motion.div>
