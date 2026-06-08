@@ -35,6 +35,10 @@ interface GameState {
   justReferred: boolean;
   clearJustReferred: () => void;
   syncedBalance: number;
+  spinsLeft: number;
+  lastSpinReset: number;
+  useSpin: () => void;
+  checkSpinReset: () => void;
 }
 
 export const useGameStore = create<GameState>()(
@@ -58,6 +62,18 @@ export const useGameStore = create<GameState>()(
   cooldowns: {},
   offlineEarnings: 0,
   justReferred: false,
+  spinsLeft: 3,
+  lastSpinReset: Date.now(),
+
+  useSpin: () => set((state) => ({ spinsLeft: Math.max(0, state.spinsLeft - 1) })),
+  checkSpinReset: () => set((state) => {
+    const now = Date.now();
+    const isNewDay = new Date(now).getUTCDate() !== new Date(state.lastSpinReset).getUTCDate();
+    if (isNewDay) {
+      return { spinsLeft: 3, lastSpinReset: now };
+    }
+    return {};
+  }),
 
   clearJustReferred: () => set({ justReferred: false }),
   incrementAdsWatched: () => set((state) => ({ adsWatched: state.adsWatched + 1 })),
