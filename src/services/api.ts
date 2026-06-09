@@ -23,114 +23,61 @@ export const AuthService = {
 };
 
 export const GameService = {
-  async fetchOrCreateUser(uid: string, telegramId: string, username: string, firstName: string, startParam?: string) {
+  async fetchOrCreateUser(uid: string, telegramId: string, username: string, firstName: string, startParam?: string, isVerifiedReferral: boolean = false) {
     const userRef = doc(db, 'users', uid);
     
-    // Resolve referrer before transaction
-    let referrerRef: any = null;
-    let referrerTelegramId: string | null = null;
-    let referrerUid: string | null = null;
-    
-    if (startParam && startParam.startsWith('ref')) {
-        referrerTelegramId = startParam.replace('ref', '');
-        
-        // Ensure not self-referral
-        if (referrerTelegramId && referrerTelegramId !== telegramId.toString()) {
-            const userQuery = query(collection(db, 'users'), where('id', '==', referrerTelegramId));
-            const sn = await getDocs(userQuery);
-            if (!sn.empty) {
-                referrerRef = sn.docs[0].ref;
-                referrerUid = sn.docs[0].id; // The Firebase UID
-            }
-        }
-    }
-    
     try {
-      const resultData = await runTransaction(db, async (transaction) => {
-        const snap = await transaction.get(userRef);
-        let userData = snap.exists() ? snap.data() : null;
+      const snap = await getDoc(userRef);
+      if (!snap.exists()) {
+          // If we had a valid startParam and are verified, process the friend reward!
+          let referredBy = null;
+          let initialBalance = 10000;
+          let referralRewardClaimed = false;
 
-        let validReferrer = false;
-        const alreadyReferred = userData?.referredBy != null;
-
-        if (referrerRef && !alreadyReferred) {
-            const referrerSnap = await transaction.get(referrerRef);
-            
-            if (referrerSnap.exists()) {
-                validReferrer = true;
-                 
-                // Increase referrer's balance and friend count securely
-                transaction.update(referrerRef, {
-                   balance: increment(100000),
+          if (isVerifiedReferral && startParam && startParam.startsWith('ref')) {
+             const referrerId = startParam.replace('ref', '');
+             // Find the referring user by telegram ID
+             const q = query(collection(db, 'users'), where('id', '==', referrerId));
+             const referrerSnap = await getDocs(q);
+             
+             if (!referrerSnap.empty) {
+                const referrerDoc = referrerSnap.docs[0];
+                referredBy = referrerId;
+                referralRewardClaimed = true;
+                // Grant reward to friend (e.g., 50000 coins + 1 friend count)
+                await updateDoc(referrerDoc.ref, {
+                   balance: increment(50000),
                    friendsCount: increment(1)
                 });
-
-                // Create referral document securely
-                const refDoc = doc(db, 'referrals', uid);
-                transaction.set(refDoc, {
-                   userId: uid,
-                   telegramId: telegramId.toString(),
-                   referrerId: referrerUid,
-                   referrerTelegramId: referrerTelegramId,
-                   firstName: firstName || 'Anonymous',
-                   username: username || '',
-                   createdAt: serverTimestamp()
-                });
-            }
-        }
-
-        if (!snap.exists()) {
-          const initialData: any = {
-            id: telegramId.toString(),
-            username: username || '',
-            firstName: firstName || 'Anonymous',
-            balance: validReferrer ? 60000 : 10000,
-            energy: 1500,
-            maxEnergy: 1500,
-            profitPerHour: 0,
-            lastLogin: Date.now(),
-            role: username === 'sekanedr_is' ? 'admin' : 'user',
-            upgrades: {},
-            missions: [],
-            friendsCount: 0,
-            adsWatched: 0,
-            referredBy: validReferrer ? referrerTelegramId : null,
-            referralRewardClaimed: validReferrer
-          };
-
-          if (validReferrer) {
-              initialData._justReferred = true;
-          }
-
-          transaction.set(userRef, initialData);
-          return initialData;
-        } else {
-          // If the user already existed but we just processed a new valid referral for them
-          if (validReferrer && !alreadyReferred) {
-             const updatedBalance = (userData?.balance || 0) + 50000;
-             transaction.update(userRef, {
-                referredBy: referrerTelegramId,
-                referralRewardClaimed: true,
-                balance: updatedBalance
-             });
-             if (userData) {
-               userData.referredBy = referrerTelegramId;
-               userData.referralRewardClaimed = true;
-               userData.balance = updatedBalance;
-               userData._justReferred = true;
+                // Grant bonus to new user
+                initialBalance += 50000;
              }
           }
-          return userData;
-        }
-      });
 
-      return resultData;
-
-    } catch (e) {
-      console.error("Referral Transaction failed: ", e);
-      // Fallback read
-      const snap = await getDoc(userRef);
+          const initialData: any = {
+             id: telegramId.toString(),
+             username: username || '',
+             firstName: firstName || 'Anonymous',
+             balance: initialBalance,
+             energy: 1500,
+             maxEnergy: 1500,
+             profitPerHour: 0,
+             lastLogin: Date.now(),
+             role: username === 'sekanedr_is' ? 'admin' : 'user',
+             upgrades: {},
+             missions: [],
+             friendsCount: 0,
+             adsWatched: 0,
+             referredBy,
+             referralRewardClaimed
+          };
+          await setRef(userRef, initialData);
+          return { ...initialData, _justReferred: referralRewardClaimed };
+      }
       return snap.data();
+    } catch (e) {
+      console.error("fetchOrCreateUser User fetch failed: ", e);
+      return null;
     }
   },
 
