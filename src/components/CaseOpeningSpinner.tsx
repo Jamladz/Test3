@@ -93,12 +93,12 @@ export function CaseOpeningSpinner({ onClose }: CaseOpeningSpinnerProps) {
     if (spinsLeft <= 0 || spinning) return;
     
     startAdSequence(
-      '43659',
+      'int-34646',
       () => {
         executeSpin();
       },
       () => {
-        alert("You must watch the ad to spin!");
+        console.log("Ad incomplete or failed.");
       }
     );
   };
