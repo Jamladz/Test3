@@ -9,6 +9,7 @@ import { Friends } from './pages/Friends';
 import { Tasks } from './pages/Tasks';
 import { Admin } from './pages/Admin';
 import { ReferralSuccessModal } from './components/ReferralSuccessModal';
+import { AdSequenceOverlay } from './components/AdSequenceOverlay';
 
 export default function App() {
   const user = useTelegramAutoLogin();
@@ -35,7 +36,7 @@ export default function App() {
   useEffect(() => {
     if (user) {
       const loadGame = async () => {
-        await fetchUser(user.id.toString(), user.username, user.first_name, user.start_param);
+        await fetchUser(user.id.toString(), user.username, user.first_name, user.start_param, user.initData);
         setTimeout(() => {
             setIsLoading(false);
         }, 1500); // give the loading bar a moment
@@ -48,6 +49,7 @@ export default function App() {
     if (!isLoading) {
       const interval = setInterval(() => {
         sync();
+        useGameStore.getState().syncGramMining();
       }, 10000);
       return () => clearInterval(interval);
     }
@@ -110,6 +112,7 @@ export default function App() {
       </div>
       
       <ReferralSuccessModal />
+      <AdSequenceOverlay />
     </div>
   );
 }
