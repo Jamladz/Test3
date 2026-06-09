@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "../lib/utils";
 import { audioManager } from '../lib/audio';
+import { startAdSequence } from '../components/AdSequenceOverlay';
 
 const TASKS = [
   {
@@ -134,22 +135,11 @@ export function Tasks() {
 
   const handleWatchAd = () => {
     if (adsWatchedToday >= 5) return;
-    const AdController = (window as any).Adsgram?.init({
-      blockId: "int-30809",
+    
+    startAdSequence(async () => {
+      // On Complete
+      await completeMissionApi(`ad_${todayDateStr}_${Date.now()}`, 50000);
     });
-    if (AdController) {
-      AdController.show()
-        .then(async (result: any) => {
-          incrementAdsWatched();
-          audioManager.playCoinSound();
-          await completeMissionApi(`ad_${todayDateStr}_${Date.now()}`, 50000);
-        })
-        .catch((result: any) => {});
-    } else {
-      incrementAdsWatched();
-      audioManager.playCoinSound();
-      completeMissionApi(`ad_${todayDateStr}_${Date.now()}`, 50000);
-    }
   };
 
   const handleDailyReward = async () => {

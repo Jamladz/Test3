@@ -5,6 +5,7 @@ import { formatCurrency, formatNumber } from '../lib/utils';
 import { Zap, Coins, FerrisWheel, Map, X, CheckCircle2, Wallet, Vault } from 'lucide-react';
 import { audioManager } from '../lib/audio';
 import { CaseOpeningSpinner } from '../components/CaseOpeningSpinner';
+import { GramModal } from '../components/GramModal';
 
 export function Game() {
   const { balance, energy, maxEnergy, tapMultiplier, addBalance, reduceEnergy, increaseEnergy, offlineEarnings, claimOfflineEarnings } = useGameStore();
@@ -14,6 +15,8 @@ export function Game() {
   const [showWheel, setShowWheel] = useState(false);
   const [showAirdropPopup, setShowAirdropPopup] = useState(false);
   const [showVaultPopup, setShowVaultPopup] = useState(false);
+  const [showGramModal, setShowGramModal] = useState(false);
+  const [showGoToSpinPopup, setShowGoToSpinPopup] = useState(false);
 
   // Energy regeneration
   useEffect(() => {
@@ -95,6 +98,21 @@ export function Game() {
             {formatCurrency(balance)}
           </h1>
         </div>
+      </div>
+
+      {/* Left Side Floating Buttons */}
+      <div className="absolute left-4 top-24 flex flex-col gap-4 z-40">
+        <button 
+          onClick={() => {
+            const twa = (window as any).Telegram?.WebApp;
+            if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
+            setShowGramModal(true);
+          }}
+          className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md flex items-center justify-center shadow-lg active:scale-95 transition-all hover:bg-white/10 relative overflow-hidden group"
+        >
+          <div className="absolute inset-0 bg-[#00f3ff]/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <img src="https://i.suar.me/0pvOj/l" alt="Gram" className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(0,243,255,0.6)]" />
+        </button>
       </div>
 
       {/* Right Side Floating Buttons */}
@@ -229,6 +247,7 @@ export function Game() {
                 onClick={() => {
                   audioManager.playCoinSound();
                   claimOfflineEarnings();
+                  setShowGoToSpinPopup(true);
                 }}
                 className="w-full py-4 rounded-xl bg-gradient-to-r from-[#FFD700] to-[#E6C200] text-black font-bold text-lg shadow-[0_0_20px_rgba(255,215,0,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
@@ -463,6 +482,55 @@ export function Game() {
             </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* Go To Spin Promo Popup */}
+      <AnimatePresence>
+        {showGoToSpinPopup && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-[#1c1c1e] border border-white/10 p-6 rounded-3xl flex flex-col items-center w-full max-w-xs shadow-2xl relative"
+            >
+              <button 
+                onClick={() => setShowGoToSpinPopup(false)}
+                className="absolute top-4 right-4 text-white/50 hover:text-white"
+              >
+                <X size={24} />
+              </button>
+              
+              <div className="w-20 h-20 bg-gradient-to-tr from-[#ffaa00]/20 to-[#ffd700]/20 rounded-full flex items-center justify-center mb-6 mt-4 border border-white/10 shadow-[0_0_30px_rgba(255,170,0,0.3)]">
+                <FerrisWheel size={36} className="text-[#ffaa00] drop-shadow-[0_0_10px_rgba(255,170,0,0.8)]" />
+              </div>
+              
+              <h2 className="text-2xl font-bold text-white mb-2 text-center">Bonus Spin Ready!</h2>
+              <p className="text-sm text-white/70 text-center mb-6">
+                You have daily spins left. Try your luck and win big rewards right now!
+              </p>
+
+              <button 
+                onClick={() => {
+                  setShowGoToSpinPopup(false);
+                  setShowWheel(true);
+                }}
+                className="w-full py-4 bg-gradient-to-r from-[#ffaa00] to-[#ffcc00] text-black font-black rounded-xl shadow-[0_0_15px_rgba(255,170,0,0.4)] hover:brightness-110 active:scale-95 transition-all text-lg"
+              >
+                Go to Spin
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+         {showGramModal && <GramModal onClose={() => setShowGramModal(false)} />}
       </AnimatePresence>
 
     </div>
