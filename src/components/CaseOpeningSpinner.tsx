@@ -93,12 +93,12 @@ export function CaseOpeningSpinner({ onClose }: CaseOpeningSpinnerProps) {
     if (spinsLeft <= 0 || spinning) return;
     
     startAdSequence(
-      'reward-43659',
+      '43659',
       () => {
         executeSpin();
       },
       () => {
-        alert("You must watch all 3 ads to spin!");
+        alert("You must watch the ad to spin!");
       }
     );
   };
