@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { X, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { startAdSequence } from './AdSequenceOverlay';
 
 // Spinner Items
 const PRIZES = [
@@ -91,29 +92,14 @@ export function CaseOpeningSpinner({ onClose }: CaseOpeningSpinnerProps) {
   const handleSpin = () => {
     if (spinsLeft <= 0 || spinning) return;
     
-    // Adsgram watch trigger
-    try {
-      const AdController = (window as any).Adsgram?.init({ blockId: 'int-30809' });
-      if (AdController) {
-        AdController.show().then((result: any) => {
-           incrementAdsWatched();
-           executeSpin();
-        }).catch((result: any) => {
-           console.error("Ad not watched or error", result);
-           // You must watch the ad!
-           alert("You must watch the ad to spin!");
-        });
-      } else {
-        // Fallback or dev mode
-        console.warn("Adsgram not found, simulating ad watch.");
-        incrementAdsWatched();
+    startAdSequence(
+      () => {
         executeSpin();
+      },
+      () => {
+        alert("You must watch all 3 ads to spin!");
       }
-    } catch(e) {
-      console.error(e);
-      incrementAdsWatched();
-      executeSpin();
-    }
+    );
   };
 
   const executeSpin = () => {
