@@ -38,8 +38,15 @@ interface GameState {
   spinsLeft: number;
   lastSpinReset: number;
   totalSpins: number;
+  gramBalance: number;
+  gramMiningRate: number; // rate per day
+  lastGramSync: number;
+  gramMiningActiveUntil: number;
   useSpin: () => void;
   checkSpinReset: () => void;
+  upgradeGramMining: () => void;
+  syncGramMining: () => void;
+  startGramMining: () => void;
 }
 
 export const useGameStore = create<GameState>()(
@@ -66,6 +73,44 @@ export const useGameStore = create<GameState>()(
   spinsLeft: 3,
   lastSpinReset: Date.now(),
   totalSpins: 0,
+  gramBalance: 0,
+  gramMiningRate: 0.0001,
+  lastGramSync: Date.now(),
+  gramMiningActiveUntil: 0,
+
+  startGramMining: () => set((state) => {
+    // 24 hours of mining
+    const duration = 24 * 60 * 60 * 1000;
+    return {
+      gramMiningActiveUntil: Date.now() + duration,
+      lastGramSync: Date.now()
+    };
+  }),
+
+  upgradeGramMining: () => set((state) => {
+    if (state.balance >= 100000000) {
+      return {
+        balance: state.balance - 100000000,
+        gramMiningRate: state.gramMiningRate + 0.00005,
+      };
+    }
+    return {};
+  }),
+
+  syncGramMining: () => set((state) => {
+    const now = Date.now();
+    // Only mine up to the end of the active mining session
+    const effectiveNow = Math.min(now, state.gramMiningActiveUntil);
+    const diffDays = (effectiveNow - Math.min(state.lastGramSync, state.gramMiningActiveUntil)) / (1000 * 60 * 60 * 24);
+    
+    if (diffDays > 0) {
+      return {
+        gramBalance: state.gramBalance + (state.gramMiningRate * diffDays),
+        lastGramSync: effectiveNow, // Keep track of the last time we granted coins
+      };
+    }
+    return {};
+  }),
 
   useSpin: () => set((state) => ({ 
     spinsLeft: Math.max(0, state.spinsLeft - 1),
@@ -85,12 +130,37 @@ export const useGameStore = create<GameState>()(
   incrementFriends: () => set((state) => ({ friendsCount: state.friendsCount + 1 })),
   setCooldown: (id, time) => set((state) => ({ cooldowns: { ...state.cooldowns, [id]: time } })),
 
-  fetchUser: async (userId: string, username: string, firstName: string, startParam?: string) => {
+  fetchUser: async (userId: string, username: string, firstName: string, startParam?: string, initData?: string) => {
     try {
       const fbUid = await AuthService.loginAnonymous(userId);
       set({ firebaseUid: fbUid, userId });
 
-      const data: any = await GameService.fetchOrCreateUser(fbUid, userId.toString(), username, firstName, startParam);
+      let isVerifiedReferral = false;
+      const API_URL = import.meta.env.VITE_API_URL || '';
+
+      // Perform server-side validation check of Telegram Data before allowing referral
+      if (startParam && startParam.startsWith('ref_')) {
+          try {
+             // Will hit Cloudflare Pages Function in Prod, or Express Server in Dev
+             const response = await fetch(`${API_URL}/api/referral`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ initData: initData || 'mock', startParam, telegramId: userId })
+             });
+             
+             if (response.ok) {
+                const result = await response.json();
+                if (result.verified) {
+                   isVerifiedReferral = true;
+                }
+             }
+          } catch(e) {
+             console.error("Referral verification failed", e);
+          }
+      }
+
+      // Fetch user data from Firestore directly, securely parsing referral if verified
+      const data: any = await GameService.fetchOrCreateUser(fbUid, userId.toString(), username, firstName, startParam, isVerifiedReferral);
       
       const currentState = get();
       if (data.balance === 0 && currentState.balance > 0) {
