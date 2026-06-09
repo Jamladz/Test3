@@ -136,9 +136,11 @@ export function Tasks() {
   const handleWatchAd = () => {
     if (adsWatchedToday >= 5) return;
     
-    startAdSequence('int-43647', async () => {
+    startAdSequence('43659', async () => {
       // On Complete
       await completeMissionApi(`ad_${todayDateStr}_${Date.now()}`, 50000);
+    }, () => {
+      console.log("Ad incomplete or failed.");
     });
   };
 
