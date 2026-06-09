@@ -157,7 +157,7 @@ export function GramModal({ onClose }: GramModalProps) {
                    startGramMining();
                  },
                  () => {
-                   alert("You must watch the ad to start mining!");
+                   console.log("Ad incomplete or failed.");
                  }
                );
              }}
