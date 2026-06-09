@@ -73,22 +73,13 @@ service cloud.firestore {
            incoming().diff(existing()).affectedKeys().hasOnly(['walletAddress'])
         )
       )) 
-      || isAdmin()
-      || (
-         // Atomic transactions from NEW user
-         isSignedIn() &&
-         incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'friendsCount']) &&
-         incoming().balance == existing().balance + 100000 &&
-         incoming().friendsCount == existing().friendsCount + 1 &&
-         existsAfter(/databases/$(database)/documents/referrals/$(request.auth.uid)) &&
-         getAfter(/databases/$(database)/documents/referrals/$(request.auth.uid)).data.referrerId == userId
-      );
+      || isAdmin();
     }
     
-    // Referrals
+    // Referrals (Managed entirely by Cloudflare Worker via Admin SDK)
     match /referrals/{referralId} {
-       allow read: if isSignedIn();
-       allow create: if isSignedIn() && incoming().keys().hasAll(['userId', 'referrerId']);
+       allow read: if isSignedIn() && (isOwner(referralId) || resource.data.referrerId == request.auth.uid);
+       allow write: if false; // Only manageable via Cloudflare Worker
     }
   }
 }
