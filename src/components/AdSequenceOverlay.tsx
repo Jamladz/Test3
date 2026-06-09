@@ -4,29 +4,23 @@ import { Video } from 'lucide-react';
 import { audioManager } from '../lib/audio';
 import { useGameStore } from '../store/useGameStore';
 
-export const AD_BLOCKS = ['int-30809', 'int-34646', 'int-43647'];
-
 let activeSequenceCompleteCallback: (() => void) | null = null;
 let activeSequenceErrorCallback: (() => void) | null = null;
+let activeSequenceBlockId: string = 'int-30809';
 
 // Global event target for ads
 export const adEvents = new EventTarget();
 
-export function startAdSequence(onComplete: () => void, onError?: () => void) {
+export function startAdSequence(blockId: string, onComplete: () => void, onError?: () => void) {
+  activeSequenceBlockId = blockId;
   activeSequenceCompleteCallback = onComplete;
   activeSequenceErrorCallback = onError || null;
   adEvents.dispatchEvent(new Event('startSequence'));
 }
 
 export function AdSequenceOverlay() {
-  const [isActive, setIsActive] = useState(false);
-  const [currentAdIndex, setCurrentAdIndex] = useState(0);
-
   useEffect(() => {
     const handleStart = async () => {
-      setIsActive(true);
-      setCurrentAdIndex(0);
-      
       const AdControllerObj = (window as any).Adsgram;
       let successCount = 0;
 
@@ -38,29 +32,18 @@ export function AdSequenceOverlay() {
         useGameStore.getState().incrementAdsWatched();
         successCount = 3;
       } else {
-        try {
-          const promises = AD_BLOCKS.map((blockId, index) => {
-            return new Promise<void>(async (resolve) => {
-                try {
-                   const controller = AdControllerObj.init({ blockId });
-                   await controller.show();
-                   useGameStore.getState().incrementAdsWatched();
-                   successCount++;
-                   resolve();
-                } catch (e) {
-                   console.warn("Ad skipped or failed.", e);
-                   resolve();
-                }
-            });
-          });
-          
-          await Promise.all(promises);
-        } catch (e) {
-          console.warn("Ad sequence failed", e);
+        // Show 3 ads consecutively using the specific Block ID for this location
+        for (let i = 0; i < 3; i++) {
+          try {
+             const controller = AdControllerObj.init({ blockId: activeSequenceBlockId });
+             await controller.show();
+             useGameStore.getState().incrementAdsWatched();
+             successCount++;
+          } catch (e) {
+             console.warn(`Ad skipped or failed for ${activeSequenceBlockId}.`, e);
+          }
         }
       }
-
-      setIsActive(false);
 
       if (successCount === 3) {
         audioManager.playCoinSound();

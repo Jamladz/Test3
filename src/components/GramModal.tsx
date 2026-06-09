@@ -152,6 +152,7 @@ export function GramModal({ onClose }: GramModalProps) {
           <button 
              onClick={() => {
                startAdSequence(
+                 'int-30809',
                  () => {
                    startGramMining();
                  },
