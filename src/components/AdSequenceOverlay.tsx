@@ -25,27 +25,22 @@ export function AdSequenceOverlay() {
       let successCount = 0;
 
       if (!AdControllerObj) {
-        console.warn("Adsgram not found, simulating ad sequence.");
+        console.warn("Adsgram not found, simulating single ad.");
         await new Promise(r => setTimeout(r, 1200));
         useGameStore.getState().incrementAdsWatched();
-        useGameStore.getState().incrementAdsWatched();
-        useGameStore.getState().incrementAdsWatched();
-        successCount = 3;
+        successCount = 1;
       } else {
-        // Show 3 ads consecutively using the specific Block ID for this location
-        for (let i = 0; i < 3; i++) {
-          try {
-             const controller = AdControllerObj.init({ blockId: activeSequenceBlockId });
-             await controller.show();
-             useGameStore.getState().incrementAdsWatched();
-             successCount++;
-          } catch (e) {
-             console.warn(`Ad skipped or failed for ${activeSequenceBlockId}.`, e);
-          }
+        try {
+           const controller = AdControllerObj.init({ blockId: activeSequenceBlockId });
+           await controller.show();
+           useGameStore.getState().incrementAdsWatched();
+           successCount = 1;
+        } catch (e) {
+           console.warn(`Ad skipped or failed for ${activeSequenceBlockId}.`, e);
         }
       }
 
-      if (successCount === 3) {
+      if (successCount === 1) {
         audioManager.playCoinSound();
         if (activeSequenceCompleteCallback) activeSequenceCompleteCallback();
       } else {
