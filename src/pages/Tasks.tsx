@@ -136,7 +136,7 @@ export function Tasks() {
   const handleWatchAd = () => {
     if (adsWatchedToday >= 5) return;
     
-    startAdSequence(async () => {
+    startAdSequence('int-43647', async () => {
       // On Complete
       await completeMissionApi(`ad_${todayDateStr}_${Date.now()}`, 50000);
     });
