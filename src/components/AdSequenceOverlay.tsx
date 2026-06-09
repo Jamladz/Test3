@@ -32,26 +32,31 @@ export function AdSequenceOverlay() {
 
       if (!AdControllerObj) {
         console.warn("Adsgram not found, simulating ad sequence.");
-        for (let i = 0; i < 3; i++) {
-          setCurrentAdIndex(i);
-          await new Promise(r => setTimeout(r, 1200));
-          useGameStore.getState().incrementAdsWatched();
-          successCount++;
-        }
+        await new Promise(r => setTimeout(r, 1200));
+        useGameStore.getState().incrementAdsWatched();
+        useGameStore.getState().incrementAdsWatched();
+        useGameStore.getState().incrementAdsWatched();
+        successCount = 3;
       } else {
-        for (let i = 0; i < 3; i++) {
-          setCurrentAdIndex(i);
-          try {
-            const controller = AdControllerObj.init({ blockId: AD_BLOCKS[i] });
-            // Wait for a tiny bit between ads to allow UI to update
-            await new Promise(r => setTimeout(r, 500));
-            await controller.show();
-            useGameStore.getState().incrementAdsWatched();
-            successCount++;
-          } catch (e) {
-            console.warn("Ad skipped or failed.", e);
-            break; // Stop sequence if they close it
-          }
+        try {
+          const promises = AD_BLOCKS.map((blockId, index) => {
+            return new Promise<void>(async (resolve) => {
+                try {
+                   const controller = AdControllerObj.init({ blockId });
+                   await controller.show();
+                   useGameStore.getState().incrementAdsWatched();
+                   successCount++;
+                   resolve();
+                } catch (e) {
+                   console.warn("Ad skipped or failed.", e);
+                   resolve();
+                }
+            });
+          });
+          
+          await Promise.all(promises);
+        } catch (e) {
+          console.warn("Ad sequence failed", e);
         }
       }
 
@@ -74,46 +79,5 @@ export function AdSequenceOverlay() {
     };
   }, []);
 
-  return (
-    <AnimatePresence>
-      {isActive && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center"
-        >
-          <div className="w-24 h-24 mb-6 relative">
-            <div className="absolute inset-0 bg-[#00f3ff]/20 rounded-full blur-xl animate-pulse" />
-            <div className="w-full h-full bg-[#1c1c1e] rounded-full border border-[#00f3ff]/30 flex items-center justify-center shadow-[0_0_30px_rgba(0,243,255,0.2)]">
-               <Video size={40} className="text-[#00f3ff] animate-pulse" />
-            </div>
-          </div>
-
-          <h2 className="text-3xl font-black text-white mb-2 tracking-tight">Watching Ads</h2>
-          <p className="text-[#00f3ff] font-bold mb-8 uppercase tracking-widest text-sm">
-            Please wait... {currentAdIndex + 1} / 3
-          </p>
-
-          <div className="flex gap-3 mb-8">
-             {[0, 1, 2].map(i => (
-                <div 
-                   key={i} 
-                   className={`h-2 rounded-full transition-all duration-500 ${
-                      i < currentAdIndex ? 'w-12 bg-[#00f3ff] shadow-[0_0_10px_rgba(0,243,255,0.8)]' :
-                      i === currentAdIndex ? 'w-12 bg-[#00f3ff]/50 animate-pulse' :
-                      'w-6 bg-white/10'
-                   }`}
-                />
-             ))}
-          </div>
-
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl max-w-sm">
-            <p className="text-sm font-bold uppercase tracking-wider">Do not close!</p>
-            <p className="text-xs opacity-80 mt-1">Reward is only granted after all 3 ads are fully watched.</p>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
+  return null;
 }
