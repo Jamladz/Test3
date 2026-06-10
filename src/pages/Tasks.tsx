@@ -31,9 +31,17 @@ const TASKS = [
     url: "https://t.me/gamee/start?startapp=eyJyZWYiOjEzNjg4OTk4NDJ9",
   },
   {
+    id: "3",
+    title: "Tonnel Network",
+    reward: 100000,
+    icon: Send,
+    color: "text-[#0088cc]",
+    url: "https://t.me/tonnel_network_bot/gifts?startapp=ref_1368899842",
+  },
+  {
     id: "ref_1",
     title: "Invite 1 Friend",
-    reward: 100000,
+    reward: 1000000,
     icon: UserPlus,
     color: "text-[#00f3ff]",
     requiredFriends: 1,
@@ -41,7 +49,7 @@ const TASKS = [
   {
     id: "ref_3",
     title: "Invite 3 Friends",
-    reward: 350000,
+    reward: 3500000,
     icon: UserPlus,
     color: "text-[#00f3ff]",
     requiredFriends: 3,
@@ -49,7 +57,7 @@ const TASKS = [
   {
     id: "ref_5",
     title: "Invite 5 Friends",
-    reward: 750000,
+    reward: 7500000,
     icon: UserPlus,
     color: "text-[#00f3ff]",
     requiredFriends: 5,
@@ -138,7 +146,7 @@ export function Tasks() {
     
     startAdSequence('43659', async () => {
       // On Complete
-      await completeMissionApi(`ad_${todayDateStr}_${Date.now()}`, 50000);
+      await completeMissionApi(`ad_${todayDateStr}_${Date.now()}`, 200000);
     }, () => {
       console.log("Ad incomplete or failed.");
     });
@@ -201,7 +209,7 @@ export function Tasks() {
                 alt="Coin"
                 className="w-[12px] h-[12px] object-contain drop-shadow-[0_0_5px_rgba(255,215,0,0.5)]"
               />
-              <span>+50,000</span>
+              <span>+200,000</span>
             </div>
             {adsWatchedToday >= 5 && (
                <div className="text-[10px] text-gray-400 mt-1">Resets in {timeLeftStr}</div>

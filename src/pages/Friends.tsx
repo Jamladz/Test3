@@ -90,7 +90,7 @@ export function Friends() {
             <h3 className="font-bold text-sm mb-1 text-white">Invite a friend</h3>
             <div className="flex items-center gap-1.5 text-[#FFD700] font-mono text-xs">
               <img src="https://i.suar.me/qv4lV/l" alt="Coin" className="w-3.5 h-3.5 object-contain drop-shadow-[0_0_5px_rgba(255,215,0,0.5)]" />
-              <span className="font-bold">+100k for you, +60k for friend</span>
+              <span className="font-bold">+1M for you, +1M for friend</span>
             </div>
           </div>
         </div>
@@ -129,7 +129,7 @@ export function Friends() {
                 
                 <div className="text-[#FFD700] font-mono text-sm font-bold flex items-center gap-1">
                   <img src="https://i.suar.me/qv4lV/l" alt="Coin" className="w-3.5 h-3.5 object-contain" />
-                  +100k
+                  +1M
                 </div>
              </div>
           ))}
