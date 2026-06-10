@@ -35,8 +35,10 @@ export function AdSequenceOverlay() {
            await controller.show();
            useGameStore.getState().incrementAdsWatched();
            successCount = 1;
-        } catch (e) {
+        } catch (e: any) {
            console.warn(`Ad skipped or failed for ${activeSequenceBlockId}.`, e);
+           // Remove noisy alert and just let it fall through or retry.
+           console.error("Adsgram sequence error:", e);
         }
       }
 
