@@ -44,7 +44,7 @@ interface GameState {
   gramMiningActiveUntil: number;
   useSpin: () => void;
   checkSpinReset: () => void;
-  upgradeGramMining: () => void;
+  upgradeGramMining: (amount: number) => void;
   syncGramMining: () => void;
   startGramMining: () => void;
   gifts: string[];
@@ -106,11 +106,12 @@ export const useGameStore = create<GameState>()(
     };
   }),
 
-  upgradeGramMining: () => set((state) => {
-    if (state.balance >= 100000000) {
+  upgradeGramMining: (amount: number) => set((state) => {
+    if (state.balance >= amount && amount >= 100000000) {
+      const increase = (amount / 100000000) * 0.00005;
       return {
-        balance: state.balance - 100000000,
-        gramMiningRate: state.gramMiningRate + 0.00005,
+        balance: state.balance - amount,
+        gramMiningRate: state.gramMiningRate + increase,
       };
     }
     return {};
