@@ -6,6 +6,7 @@ import { Zap, Coins, FerrisWheel, Map, X, CheckCircle2, Wallet, Vault } from 'lu
 import { audioManager } from '../lib/audio';
 import { CaseOpeningSpinner } from '../components/CaseOpeningSpinner';
 import { GramModal } from '../components/GramModal';
+import { GiftsModal } from '../components/GiftsModal';
 
 export function Game() {
   const { balance, energy, maxEnergy, tapMultiplier, addBalance, reduceEnergy, increaseEnergy, offlineEarnings, claimOfflineEarnings } = useGameStore();
@@ -16,6 +17,7 @@ export function Game() {
   const [showAirdropPopup, setShowAirdropPopup] = useState(false);
   const [showVaultPopup, setShowVaultPopup] = useState(false);
   const [showGramModal, setShowGramModal] = useState(false);
+  const [showGiftsModal, setShowGiftsModal] = useState(false);
   const [showGoToSpinPopup, setShowGoToSpinPopup] = useState(false);
 
   // Energy regeneration
@@ -112,6 +114,16 @@ export function Game() {
         >
           <div className="absolute inset-0 bg-[#00f3ff]/10 opacity-0 group-hover:opacity-100 transition-opacity" />
           <img src="https://i.suar.me/0pvOj/l" alt="Gram" className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(0,243,255,0.6)]" />
+        </button>
+        <button 
+          onClick={() => {
+            const twa = (window as any).Telegram?.WebApp;
+            if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
+            setShowGiftsModal(true);
+          }}
+          className="w-12 h-12 rounded-2xl active:scale-95 transition-all relative overflow-hidden group shadow-[0_0_15px_rgba(0,243,255,0.3)] bg-transparent"
+        >
+          <img src="https://i.suar.me/4zynX/l" alt="Gifts" className="w-full h-full object-contain" />
         </button>
       </div>
 
@@ -531,6 +543,7 @@ export function Game() {
 
       <AnimatePresence>
          {showGramModal && <GramModal onClose={() => setShowGramModal(false)} />}
+        {showGiftsModal && <GiftsModal onClose={() => setShowGiftsModal(false)} />}
       </AnimatePresence>
 
     </div>
