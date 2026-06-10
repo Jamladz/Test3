@@ -145,9 +145,9 @@ export function Game() {
             if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
             setShowWheel(true);
           }}
-          className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md flex items-center justify-center shadow-lg active:scale-95 transition-all hover:bg-white/10 shadow-[0_0_15px_rgba(255,170,0,0.15)] text-[#ffaa00]"
+          className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-[0_0_15px_rgba(255,170,0,0.15)] active:scale-95 transition-all relative overflow-hidden group hover:shadow-[0_0_20px_rgba(255,170,0,0.3)] bg-[#1a1a24] border border-[#ffaa00]/30 p-0.5"
         >
-          <img src="https://i.suar.me/jveMW/l" alt="Spin" className="w-[26px] h-[26px] object-contain drop-shadow-[0_0_8px_rgba(255,170,0,0.8)]" />
+          <img src="https://i.suar.me/PpW1r/l" alt="Spin" className="w-full h-full rounded-[14px] object-cover transition-transform group-hover:scale-110" />
         </button>
         <button 
           onClick={() => {
@@ -518,8 +518,10 @@ export function Game() {
                 <X size={24} />
               </button>
               
-              <div className="w-20 h-20 mb-6 mt-4">
-                <img src="https://i.suar.me/jveMW/l" alt="Spin" className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(255,170,0,0.8)]" />
+              <div className="w-24 h-24 mb-6 mt-4 p-4 rounded-3xl bg-gradient-to-tr from-[#ffaa00]/20 to-[#ffd700]/10 border border-[#ffaa00]/30 shadow-[0_0_40px_rgba(255,170,0,0.3)] relative flex items-center justify-center group">
+                <div className="absolute inset-0 rounded-3xl animate-pulse bg-[#ffaa00]/10"></div>
+                <div className="absolute inset-0 rounded-3xl border-2 border-[#ffaa00]/20 scale-105 opacity-50"></div>
+                <img src="https://i.suar.me/PpW1r/l" alt="Spin" className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_15px_rgba(255,170,0,0.8)]" />
               </div>
               
               <h2 className="text-2xl font-bold text-white mb-2 text-center">Bonus Spin Ready!</h2>
