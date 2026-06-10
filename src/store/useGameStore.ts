@@ -47,6 +47,8 @@ interface GameState {
   upgradeGramMining: () => void;
   syncGramMining: () => void;
   startGramMining: () => void;
+  gifts: string[];
+  addGift: (img: string) => Promise<void>;
 }
 
 export const useGameStore = create<GameState>()(
@@ -77,6 +79,23 @@ export const useGameStore = create<GameState>()(
   gramMiningRate: 0.0001,
   lastGramSync: Date.now(),
   gramMiningActiveUntil: 0,
+  gifts: [],
+
+  addGift: async (img: string) => {
+    const state = get();
+    if (!state.firebaseUid) return;
+    try {
+      const newGifts = [...state.gifts, img];
+      await GameService.syncState(state.firebaseUid, {
+          gifts: newGifts
+      });
+      set({ gifts: newGifts });
+    } catch(e) {
+      console.error(e);
+      // Fallback local update
+      set({ gifts: [...state.gifts, img] });
+    }
+  },
 
   startGramMining: () => set((state) => {
     // 24 hours of mining
@@ -177,6 +196,7 @@ export const useGameStore = create<GameState>()(
           role: data.role || 'user',
           upgrades: data.upgrades || {},
           missions: data.missions || [],
+          gifts: data.gifts || [],
           friendsCount: data.friendsCount || 0,
           adsWatched: data.adsWatched || 0,
           userId,
