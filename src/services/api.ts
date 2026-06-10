@@ -94,6 +94,7 @@ export const GameService = {
           // Calculate new balance securely using the delta
           const balanceDelta = deltas.balanceDelta || 0;
           const newBalance = Math.max(0, (data.balance || 0) + balanceDelta);
+          const totalTapped = (data.totalTapped || 0) + balanceDelta;
           
           // Allow friendsCount to only go up or stay same
           const currentAds = data.adsWatched || 0;
@@ -101,11 +102,16 @@ export const GameService = {
 
           const updates: any = {
               balance: newBalance,
+              totalTapped: totalTapped,
               energy: deltas.energy ?? data.energy,
               lastLogin: deltas.lastLogin || Date.now(),
               adsWatched: newAds
           };
-
+          if (deltas.gifts) {
+              updates.gifts = deltas.gifts;
+          }
+          console.log("SYNC UPDATES:", updates);
+          console.log("DIFF KEYS:", Object.keys(updates));
           transaction.update(userRef, updates);
           
           return { ...data, ...updates };
@@ -142,13 +148,21 @@ export const GameService = {
     const usersList: any[] = [];
     usersSnap.forEach(doc => {
        const u = doc.data();
+       const fName = String(u.firstName || '').toLowerCase();
+       const uName = String(u.username || '').toLowerCase();
+       
+       // Hide test accounts from the admin panel completely
+       if (fName.includes('test') || uName.includes('test')) {
+         return; 
+       }
+       
        totalEconomy += (u.balance || 0);
        if (u.role === 'banned') bannedBots++;
        usersList.push(u);
     });
     // Sort users by balance descended
     usersList.sort((a,b) => (b.balance || 0) - (a.balance || 0));
-    return { totalUsers: usersSnap.size, totalEconomy, bannedBots, users: usersList };
+    return { totalUsers: usersList.length, totalEconomy, bannedBots, users: usersList };
   },
 
   async updateWallet(uid: string, address: string) {
