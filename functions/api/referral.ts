@@ -2,7 +2,7 @@ export interface Env {
   TELEGRAM_BOT_TOKEN: string;
 }
 
-export const onRequestPost: PagesFunction<Env> = async (context) => {
+export const onRequestPost: any = async (context: any) => {
   const { request, env } = context;
   
   let body: any;
