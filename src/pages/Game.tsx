@@ -145,9 +145,9 @@ export function Game() {
             if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
             setShowWheel(true);
           }}
-          className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md flex items-center justify-center shadow-lg active:scale-95 transition-all text-[#ffaa00] hover:bg-white/10"
+          className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md flex items-center justify-center shadow-lg active:scale-95 transition-all hover:bg-white/10 shadow-[0_0_15px_rgba(255,170,0,0.15)] text-[#ffaa00]"
         >
-          <FerrisWheel size={22} className="drop-shadow-[0_0_8px_rgba(255,170,0,0.8)]" />
+          <img src="https://i.suar.me/jveMW/l" alt="Spin" className="w-[26px] h-[26px] object-contain drop-shadow-[0_0_8px_rgba(255,170,0,0.8)]" />
         </button>
         <button 
           onClick={() => {
@@ -518,8 +518,8 @@ export function Game() {
                 <X size={24} />
               </button>
               
-              <div className="w-20 h-20 bg-gradient-to-tr from-[#ffaa00]/20 to-[#ffd700]/20 rounded-full flex items-center justify-center mb-6 mt-4 border border-white/10 shadow-[0_0_30px_rgba(255,170,0,0.3)]">
-                <FerrisWheel size={36} className="text-[#ffaa00] drop-shadow-[0_0_10px_rgba(255,170,0,0.8)]" />
+              <div className="w-20 h-20 mb-6 mt-4">
+                <img src="https://i.suar.me/jveMW/l" alt="Spin" className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(255,170,0,0.8)]" />
               </div>
               
               <h2 className="text-2xl font-bold text-white mb-2 text-center">Bonus Spin Ready!</h2>
