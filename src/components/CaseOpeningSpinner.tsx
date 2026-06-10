@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { X, Play } from 'lucide-react';
+import { X, Play, Gem } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { startAdSequence } from './AdSequenceOverlay';
+import { useTonConnectUI } from '@tonconnect/ui-react';
 
 // Spinner Items
 const FILLER_IMAGES = [
@@ -39,6 +40,9 @@ export function CaseOpeningSpinner({ onClose }: CaseOpeningSpinnerProps) {
   const [offset, setOffset] = useState(0);
   const [timeLeft, setTimeLeft] = useState<string>("");
   
+  const [tonConnectUI] = useTonConnectUI();
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const ITEM_WIDTH = 100;
   
   useEffect(() => {
@@ -103,10 +107,51 @@ export function CaseOpeningSpinner({ onClose }: CaseOpeningSpinnerProps) {
     );
   };
 
-  const executeSpin = () => {
+  const handleTonSpin = async () => {
+    if (spinning || isProcessing) return;
+    
+    try {
+      setIsProcessing(true);
+      if (!tonConnectUI.connected) {
+        await tonConnectUI.connectWallet();
+      }
+
+      if (tonConnectUI.connected) {
+        const transaction = {
+          validUntil: Math.floor(Date.now() / 1000) + 60, // 60 seconds
+          messages: [
+            {
+              address: "UQCTZAMbXoN5T43K9gJXH8GYWBmIstXrUrdoV9kv3btN1Ad3",
+              amount: "50000000", // 0.05 TON in nanoTON
+            }
+          ]
+        };
+
+        await tonConnectUI.sendTransaction(transaction);
+        executeSpin(true);
+      }
+    } catch (e: any) {
+      const msg = e?.message || String(e);
+      if (msg.toLowerCase().includes('reject') || msg.toLowerCase().includes('decline') || msg.toLowerCase().includes('not sent') || msg.toLowerCase().includes('cancel')) {
+        console.log("TON Transaction cancelled by user");
+        const twa = (window as any).Telegram?.WebApp;
+        if (twa?.showAlert) {
+            twa.showAlert("Transaction was cancelled.");
+        }
+      } else {
+        console.error("TON Transaction failed", e);
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const executeSpin = (isTonSpin = false) => {
     setSpinning(true);
     setReward(null);
-    useSpin();
+    if (!isTonSpin) {
+      useSpin();
+    }
 
     // Prepare items with a guaranteed coin win at the target index
     const targetIndex = 40; // Stop around item 40
@@ -216,23 +261,37 @@ export function CaseOpeningSpinner({ onClose }: CaseOpeningSpinnerProps) {
             )}
         </AnimatePresence>
         
-        <button 
-          onClick={handleSpin}
-          disabled={spinning || spinsLeft <= 0}
-          className="w-full mt-6 py-4 rounded-xl bg-gradient-to-r from-[#FFD700] to-[#F59E0B] text-black font-bold text-lg hover:brightness-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,215,0,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 flex-col h-[72px]"
-        >
-          {spinsLeft <= 0 ? (
-            <>
-              <span className="text-sm">Available in</span>
-              <span className="font-mono text-xl">{timeLeft}</span>
-            </>
-          ) : (
-             <div className="flex items-center gap-2">
-                <Play size={20} fill="currentColor" />
-                Spin & Watch Ad
+        <div className="flex flex-col gap-3 mt-6">
+          <button 
+            onClick={handleSpin}
+            disabled={spinning || spinsLeft <= 0}
+            className="w-full py-4 rounded-xl bg-gradient-to-r from-[#FFD700] to-[#F59E0B] text-black font-bold text-lg hover:brightness-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,215,0,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 flex-col h-[72px]"
+          >
+            {spinsLeft <= 0 ? (
+              <>
+                <span className="text-sm">Available in</span>
+                <span className="font-mono text-xl">{timeLeft}</span>
+              </>
+            ) : (
+               <div className="flex items-center gap-2">
+                  <Play size={20} fill="currentColor" />
+                  Spin & Watch Ad
+               </div>
+            )}
+          </button>
+          
+          <button 
+            onClick={handleTonSpin}
+            disabled={spinning || isProcessing}
+            className="w-full py-4 rounded-xl bg-gradient-to-r from-[#00f3ff]/20 to-[#00f3ff]/10 text-white font-bold border border-[#00f3ff]/30 hover:bg-[#00f3ff]/30 active:scale-95 transition-all shadow-[0_0_15px_rgba(0,243,255,0.2)] disabled:opacity-50 disabled:cursor-not-allowed flex flex-col items-center justify-center gap-1 min-h-[72px]"
+          >
+             <div className="flex items-center gap-2 text-lg">
+                <img src="https://i.suar.me/MpXLm/l" alt="TON" className="w-[18px] h-[18px]" />
+                Spin with TON
              </div>
-          )}
-        </button>
+             <span className="text-xs text-[#00f3ff]/80">Price: 0.05 TON</span>
+          </button>
+        </div>
       </motion.div>
     </motion.div>
   );
