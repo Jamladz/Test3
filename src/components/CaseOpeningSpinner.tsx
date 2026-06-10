@@ -5,13 +5,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { startAdSequence } from './AdSequenceOverlay';
 
 // Spinner Items
-const PRIZES = [
-  { type: 'coin', value: 10000, img: 'https://i.suar.me/qv4lV/l' },
-  { type: 'coin', value: 25000, img: 'https://i.suar.me/qv4lV/l' },
-  { type: 'coin', value: 50000, img: 'https://i.suar.me/qv4lV/l' },
-  { type: 'coin', value: 100000, img: 'https://i.suar.me/qv4lV/l' },
-];
-
 const FILLER_IMAGES = [
   'https://i.suar.me/Lpxpo/l', // Plush Pepe
   'https://i.suar.me/2zGz9/l', // Scared Cat
@@ -23,6 +16,13 @@ const FILLER_IMAGES = [
   'https://i.suar.me/9zPzB/l', // Snoop Cigar
   'https://i.suar.me/V9d9g/l', // Lonic Dryer
   'https://i.suar.me/wzAz6/l', // Signet Ring
+];
+
+const PRIZES = [
+  { type: 'coin', value: 10000, img: 'https://i.suar.me/qv4lV/l' },
+  { type: 'coin', value: 25000, img: 'https://i.suar.me/qv4lV/l' },
+  { type: 'coin', value: 50000, img: 'https://i.suar.me/qv4lV/l' },
+  { type: 'coin', value: 100000, img: 'https://i.suar.me/qv4lV/l' },
 ];
 
 interface CaseOpeningSpinnerProps {
