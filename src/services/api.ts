@@ -44,13 +44,13 @@ export const GameService = {
                 const referrerDoc = referrerSnap.docs[0];
                 referredBy = referrerId;
                 referralRewardClaimed = true;
-                // Grant reward to friend (e.g., 50000 coins + 1 friend count)
+                // Grant reward to friend (e.g., 1000000 coins + 1 friend count)
                 await updateDoc(referrerDoc.ref, {
-                   balance: increment(50000),
+                   balance: increment(1000000),
                    friendsCount: increment(1)
                 });
                 // Grant bonus to new user
-                initialBalance += 50000;
+                initialBalance += 1000000;
              }
           }
 
