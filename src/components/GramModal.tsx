@@ -14,6 +14,7 @@ export function GramModal({ onClose }: GramModalProps) {
   const [timeLeft, setTimeLeft] = useState<string>('');
   const [isMining, setIsMining] = useState(false);
   const [displayBalance, setDisplayBalance] = useState(gramBalance);
+  const [upgradeAmount, setUpgradeAmount] = useState<number>(100000000);
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -174,20 +175,33 @@ export function GramModal({ onClose }: GramModalProps) {
                      <ArrowUpCircle size={20} className="text-[#00f3ff]" />
                      <span className="text-base sm:text-lg font-bold text-white">Upgrade Rig</span>
                  </div>
-                 <div className="flex items-center gap-1.5 font-mono text-xs sm:text-sm text-[#FFD700] font-bold bg-[#FFD700]/10 px-2 sm:px-3 py-1 rounded-full border border-[#FFD700]/20">
-                     <span>100M</span>
-                     <img src="https://i.suar.me/qv4lV/l" alt="Coins" className="w-3.5 h-3.5 sm:w-4 sm:h-4 object-contain" />
-                 </div>
               </div>
               <p className="text-xs sm:text-sm text-white/70 mb-3 leading-relaxed">
-                Boost your hardware to permanently increase your daily GRAM yield.
+                Boost your hardware to permanently increase your daily GRAM yield. (Min 100M Coins)
               </p>
+              
+              <div className="flex items-center gap-2 mb-4 bg-black/40 border border-white/10 rounded-xl p-2">
+                 <img src="https://i.suar.me/qv4lV/l" alt="Coins" className="w-5 h-5 ml-2 object-contain" />
+                 <input 
+                   type="number"
+                   value={upgradeAmount || ""}
+                   onChange={(e) => setUpgradeAmount(Number(e.target.value))}
+                   min={100000000}
+                   step={1000000}
+                   className="bg-transparent text-white font-mono flex-1 outline-none font-bold"
+                 />
+              </div>
+
               <button 
-                 onClick={upgradeGramMining}
-                 disabled={balance < 100000000}
+                 onClick={() => {
+                   if (upgradeAmount >= 100000000 && balance >= upgradeAmount) {
+                     upgradeGramMining(upgradeAmount);
+                   }
+                 }}
+                 disabled={balance < upgradeAmount || upgradeAmount < 100000000}
                  className="w-full py-2.5 sm:py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-[#00f3ff] font-bold text-[13px] sm:text-[15px] transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 hover:border-[#00f3ff]/50"
               >
-                 {balance < 100000000 ? "Insufficient Coins" : "Upgrade Hashrate"}
+                 {balance < upgradeAmount ? "Insufficient Coins" : "Upgrade Hashrate"}
               </button>
             </div>
           </div>

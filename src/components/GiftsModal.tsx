@@ -37,9 +37,9 @@ export function GiftsModal({ onClose }: GiftsModalProps) {
           
           <button 
             onClick={onClose}
-            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-colors z-10"
+            className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all active:scale-90 z-50 shadow-md"
           >
-            <X size={20} />
+            <X size={24} />
           </button>
 
           <div className="flex flex-col items-center mb-6 relative z-10 pt-4">
