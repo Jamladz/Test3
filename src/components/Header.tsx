@@ -49,7 +49,7 @@ export function Header() {
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-[#FFD700] to-[#E6C200] p-0.5 shadow-[0_4px_10px_rgba(255,215,0,0.3)] shrink-0">
             <div className="w-full h-full rounded-[6px] bg-[#1c1c1e] flex items-center justify-center overflow-hidden">
-              <img src="https://i.suar.me/WPjPM/l" alt="PlushTap" className="w-full h-full object-cover" />
+              <img src="https://i.suar.me/X9N3J/l" alt="PlushTap" className="w-full h-full object-cover" />
             </div>
           </div>
           <div className="flex flex-col min-w-[80px]">
