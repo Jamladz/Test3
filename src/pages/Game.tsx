@@ -542,10 +542,10 @@ export function Game() {
       </AnimatePresence>
 
       <AnimatePresence>
-         {showGramModal && <GramModal key="gramModal" onClose={() => setShowGramModal(false)} />}
+         {showGramModal && <GramModal onClose={() => setShowGramModal(false)} />}
       </AnimatePresence>
       <AnimatePresence>
-        {showGiftsModal && <GiftsModal key="giftsModal" onClose={() => setShowGiftsModal(false)} />}
+        {showGiftsModal && <GiftsModal onClose={() => setShowGiftsModal(false)} />}
       </AnimatePresence>
 
     </div>

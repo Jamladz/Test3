@@ -245,7 +245,9 @@ export function Admin() {
                    <tr>
                       <th className="px-5 py-3 font-medium">Player</th>
                       <th className="px-5 py-3 font-medium">Telegram ID</th>
-                      <th className="px-5 py-3 font-medium text-right">Balance</th>
+                      <th className="px-5 py-3 font-medium text-center">Ads Watched</th>
+                      <th className="px-5 py-3 font-medium text-right">Tap Value</th>
+                      <th className="px-5 py-3 font-medium text-right">Total Balance</th>
                       <th className="px-5 py-3 font-medium text-right">Action</th>
                    </tr>
                 </thead>
@@ -264,9 +266,21 @@ export function Admin() {
                             </div>
                          </td>
                          <td className="px-5 py-3 text-gray-400 font-mono text-xs">{u.id}</td>
+                         <td className="px-5 py-3 text-center">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#00f3ff]/10 text-[#00f3ff] font-mono text-xs font-bold border border-[#00f3ff]/20">
+                               <Zap size={12} className="text-[#00f3ff]" />
+                               {u.adsWatched || 0}
+                            </div>
+                         </td>
                          <td className="px-5 py-3 text-right">
-                            <div className="font-bold text-[#FFD700] flex items-center justify-end gap-1.5">
-                               <Coins size={12} />
+                            <div className="font-bold text-gray-300 font-mono text-xs flex items-center justify-end gap-1.5">
+                               <Coins size={10} className="opacity-50" />
+                               {formatCurrency(u.totalTapped || 0)}
+                            </div>
+                         </td>
+                         <td className="px-5 py-3 text-right">
+                            <div className="font-bold text-[#FFD700] flex items-center justify-end gap-1.5 bg-[#FFD700]/5 px-3 py-1 rounded-lg border border-[#FFD700]/10 ml-auto w-fit">
+                               <Coins size={14} className="drop-shadow-[0_0_5px_rgba(255,215,0,0.5)]" />
                                {formatCurrency(u.balance || 0)}
                             </div>
                          </td>
@@ -279,7 +293,7 @@ export function Admin() {
                    ))}
                    {stats.users.length === 0 && (
                       <tr>
-                         <td colSpan={4} className="px-5 py-8 text-center text-gray-500 text-sm">
+                         <td colSpan={6} className="px-5 py-8 text-center text-gray-500 text-sm">
                             {loading ? 'Scanning database...' : 'No players found'}
                          </td>
                       </tr>

@@ -166,7 +166,7 @@ export function Tasks() {
   return (
     <div className="flex flex-col flex-1 w-full px-4 pb-6 overflow-y-auto no-scrollbar min-h-0">
       <div className="text-center mb-6 mt-4">
-        <div className="mx-auto w-16 h-16 bg-[url('https://i.suar.me/WPjPM/l')] bg-cover mb-4 rounded-full shadow-[0_0_20px_rgba(255,215,0,0.3)]" />
+        <div className="mx-auto w-16 h-16 bg-[url('https://i.suar.me/X9N3J/l')] bg-cover mb-4 rounded-full shadow-[0_0_20px_rgba(255,215,0,0.3)]" />
         <h1 className="text-3xl font-bold mb-1">Earn more coins</h1>
       </div>
 
