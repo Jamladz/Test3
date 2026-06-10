@@ -15,7 +15,7 @@ interface GameState {
   increaseEnergy: (amount: number) => void;
   buyUpgrade: (cost: number, profitIncrease: number) => boolean;
   updateFromOffline: () => void;
-  fetchUser: (userId: string, username: string, firstName: string, startParam?: string) => Promise<void>;
+  fetchUser: (userId: string, username: string, firstName: string, startParam?: string, initData?: string) => Promise<void>;
   sync: () => Promise<void>;
   userId: string;
   firebaseUid: string;
