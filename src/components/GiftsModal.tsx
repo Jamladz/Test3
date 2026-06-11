@@ -73,7 +73,7 @@ export function GiftsModal({ onClose }: GiftsModalProps) {
           <button
              onClick={handleWithdraw}
              disabled={!gifts || gifts.length === 0}
-             className="w-full py-4 rounded-xl bg-gradient-to-r from-[#00f3ff] to-blue-600 font-bold text-white shadow-[0_0_20px_rgba(0,243,255,0.3)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+             className="w-full py-4 rounded-xl bg-gradient-to-r from-[#00f3ff] to-[#ffaa00] font-bold text-white shadow-[0_0_20px_rgba(0,243,255,0.3)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
              Withdraw Gifts
           </button>

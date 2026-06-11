@@ -35,7 +35,7 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
         </button>
         
         <div className="flex flex-col items-center mt-4 mb-6">
-          <div className="w-20 h-20 bg-gradient-to-tr from-[#9d00ff] to-[#00f3ff] rounded-full p-1 mb-4">
+          <div className="w-20 h-20 bg-gradient-to-tr from-[#ffaa00] to-[#00f3ff] rounded-full p-1 mb-4">
             <div className="w-full h-full bg-[#1c1c1e] rounded-full flex items-center justify-center">
                <User size={40} className="text-[#00f3ff]" />
             </div>

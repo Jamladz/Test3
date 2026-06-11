@@ -61,7 +61,7 @@ export function Header() {
             </div>
             <div className="w-full h-1.5 bg-[#1c1c1e] rounded-full overflow-hidden mt-0.5 border border-white/5">
               <div 
-                className="h-full bg-gradient-to-r from-[#9d00ff] to-[#00f3ff] transition-all duration-300" 
+                className="h-full bg-gradient-to-r from-[#ffaa00] to-[#00f3ff] transition-all duration-300" 
                 style={{ width: `${progressToNext}%` }}
               />
             </div>

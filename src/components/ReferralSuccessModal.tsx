@@ -37,7 +37,7 @@ export function ReferralSuccessModal() {
 
             <button
               onClick={clearJustReferred}
-              className="w-full h-12 rounded-xl bg-gradient-to-r from-[#00f3ff] to-blue-500 font-bold text-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform"
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-[#00f3ff] to-[#ffaa00] font-bold text-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform"
             >
               <CheckCircle2 size={18} />
               Awesome!

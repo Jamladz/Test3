@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Pickaxe, ActivitySquare, ArrowUpCircle, ChevronLeft } from 'lucide-react';
+import { X, Pickaxe, ActivitySquare, ArrowUpCircle, ChevronLeft, Loader2 } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
 import { formatCurrency } from '../lib/utils';
 import { startAdSequence } from './AdSequenceOverlay';
@@ -15,6 +15,7 @@ export function GramModal({ onClose }: GramModalProps) {
   const [isMining, setIsMining] = useState(false);
   const [displayBalance, setDisplayBalance] = useState(gramBalance);
   const [upgradeAmount, setUpgradeAmount] = useState<number>(100000000);
+  const [isUpgrading, setIsUpgrading] = useState(false);
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -129,7 +130,7 @@ export function GramModal({ onClose }: GramModalProps) {
           
           <div className="flex items-center gap-3 drop-shadow-[0_0_15px_rgba(0,243,255,0.4)] mb-1">
             <img src="https://i.suar.me/0pvOj/l" alt="GRAM" className={`w-8 h-8 sm:w-10 sm:h-10 object-contain ${isMiningActive ? 'drop-shadow-[0_0_8px_rgba(0,243,255,0.6)] animate-pulse' : 'grayscale opacity-70'}`} />
-            <div className={`text-4xl sm:text-5xl font-black ${isMiningActive ? 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-[#00f3ff]' : 'text-gray-400'}`}>
+            <div className={`text-4xl sm:text-5xl font-black ${isMiningActive ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#ffaa00] to-[#00f3ff]' : 'text-gray-400'}`}>
               <span className="font-mono tracking-tighter">{displayBalance.toFixed(9)}</span> <span className="text-lg sm:text-2xl tracking-normal ml-1">GRAM</span>
             </div>
           </div>
@@ -162,7 +163,7 @@ export function GramModal({ onClose }: GramModalProps) {
                  }
                );
              }}
-             className="w-full py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-[#00a8ff] to-[#00f3ff] text-black font-black text-lg sm:text-xl hover:brightness-110 active:scale-95 transition-all shadow-[0_0_30px_rgba(0,243,255,0.4)] flex items-center justify-center gap-3 shrink-0"
+             className="w-full py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-[#ffaa00] to-[#00f3ff] text-black font-black text-lg sm:text-xl hover:brightness-110 active:scale-95 transition-all shadow-[0_0_30px_rgba(0,243,255,0.4)] flex items-center justify-center gap-3 shrink-0"
           >
              <Pickaxe size={24} />
              START MINING
@@ -194,14 +195,27 @@ export function GramModal({ onClose }: GramModalProps) {
 
               <button 
                  onClick={() => {
-                   if (upgradeAmount >= 100000000 && balance >= upgradeAmount) {
-                     upgradeGramMining(upgradeAmount);
+                   if (upgradeAmount >= 100000000 && balance >= upgradeAmount && !isUpgrading) {
+                     setIsUpgrading(true);
+                     setTimeout(() => {
+                       upgradeGramMining(upgradeAmount);
+                       setIsUpgrading(false);
+                     }, 3000);
                    }
                  }}
-                 disabled={balance < upgradeAmount || upgradeAmount < 100000000}
-                 className="w-full py-2.5 sm:py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-[#00f3ff] font-bold text-[13px] sm:text-[15px] transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 hover:border-[#00f3ff]/50"
+                 disabled={balance < upgradeAmount || upgradeAmount < 100000000 || isUpgrading}
+                 className="w-full py-2.5 sm:py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-[#00f3ff] font-bold text-[13px] sm:text-[15px] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 hover:border-[#00f3ff]/50"
               >
-                 {balance < upgradeAmount ? "Insufficient Coins" : "Upgrade Hashrate"}
+                 {isUpgrading ? (
+                   <>
+                     <Loader2 size={18} className="animate-spin" />
+                     <span>Processing...</span>
+                   </>
+                 ) : balance < upgradeAmount ? (
+                   "Insufficient Coins"
+                 ) : (
+                   "Upgrade Hashrate"
+                 )}
               </button>
             </div>
           </div>

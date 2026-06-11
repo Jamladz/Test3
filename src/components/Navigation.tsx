@@ -39,7 +39,7 @@ export function Navigation({ currentTab, setTab, isAdmin }: NavigationProps) {
               {isActive && (
                 <motion.div
                   layoutId="nav-indicator"
-                  className="absolute inset-0 bg-gradient-to-b from-[#9d00ff]/20 to-transparent rounded-2xl -z-10"
+                  className="absolute inset-0 bg-gradient-to-b from-[#ffaa00]/20 to-transparent rounded-2xl -z-10"
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 />
               )}
