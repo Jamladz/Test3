@@ -158,7 +158,7 @@ export const GameService = {
        
        totalEconomy += (u.balance || 0);
        if (u.role === 'banned') bannedBots++;
-       usersList.push(u);
+       usersList.push({ ...u, uid: doc.id });
     });
     // Sort users by balance descended
     usersList.sort((a,b) => (b.balance || 0) - (a.balance || 0));
@@ -168,5 +168,10 @@ export const GameService = {
   async updateWallet(uid: string, address: string) {
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, { walletAddress: address });
+  },
+
+  async setBanStatus(uid: string, banned: boolean) {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, { role: banned ? 'banned' : 'user' });
   }
 };
