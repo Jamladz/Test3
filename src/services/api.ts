@@ -59,6 +59,7 @@ export const GameService = {
              username: username || '',
              firstName: firstName || 'Anonymous',
              balance: initialBalance,
+             tonBalance: 0.5,
              energy: 1500,
              maxEnergy: 1500,
              profitPerHour: 0,
