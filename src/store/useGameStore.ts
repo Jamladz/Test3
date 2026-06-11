@@ -111,6 +111,7 @@ export const useGameStore = create<GameState>()(
       const increase = (amount / 100000000) * 0.00005;
       return {
         balance: state.balance - amount,
+        syncedBalance: state.syncedBalance - amount,
         gramMiningRate: state.gramMiningRate + increase,
       };
     }
@@ -217,7 +218,8 @@ export const useGameStore = create<GameState>()(
     try {
        await GameService.buyUpgrade(state.firebaseUid, upgradeId, cost, profitInc);
        set(state => ({
-         balance: state.balance - cost,
+         balance: Math.max(0, state.balance - cost),
+         syncedBalance: Math.max(0, state.syncedBalance - cost),
          profitPerHour: state.profitPerHour + profitInc,
          upgrades: { ...state.upgrades, [upgradeId]: (state.upgrades[upgradeId] || 0) + 1 }
        }));
