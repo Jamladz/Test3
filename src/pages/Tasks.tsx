@@ -198,7 +198,7 @@ export function Tasks() {
         className={`glass-panel p-4 rounded-2xl flex items-center justify-between mb-8 w-full block transition-transform ${adsWatchedToday >= 5 ? "opacity-70" : "active:scale-95 ring-1 ring-[#00f3ff]/30 shadow-[0_4px_20px_rgba(0,243,255,0.15)] hover:bg-white/5"}`}
       >
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-[#00f3ff]/20 to-blue-600/20 rounded-xl flex items-center justify-center text-[#00f3ff] shrink-0">
+          <div className="w-12 h-12 bg-gradient-to-br from-[#00f3ff]/20 to-[#ffaa00]/20 rounded-xl flex items-center justify-center text-[#00f3ff] shrink-0">
             <Video size={24} />
           </div>
           <div className="text-left">

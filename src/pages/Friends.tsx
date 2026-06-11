@@ -25,13 +25,19 @@ export function Friends() {
     const fetchFriends = async () => {
       try {
         const q = query(
-          collection(db, 'referrals'),
-          where('referrerTelegramId', '==', userId.toString())
+          collection(db, 'users'),
+          where('referredBy', '==', userId.toString())
         );
         const querySnapshot = await getDocs(q);
-        const friends: ReferralDoc[] = [];
+        const friends: any[] = [];
         querySnapshot.forEach((doc) => {
-          friends.push(doc.data() as ReferralDoc);
+          const data = doc.data();
+          friends.push({
+            userId: doc.id,
+            firstName: data.firstName || 'Anonymous',
+            username: data.username || '',
+            createdAt: { seconds: data.lastLogin / 1000 } // fallback
+          });
         });
         
         // Sort manually by date if available
@@ -139,7 +145,7 @@ export function Friends() {
       <div className="mt-auto sticky bottom-0 left-0 right-0 py-4 z-40 max-w-md mx-auto flex gap-3 bg-[#000000]/80 backdrop-blur-md">
         <button 
           onClick={handleInvite}
-          className="flex-1 bg-gradient-to-r from-[#00f3ff] to-blue-500 hover:from-blue-400 hover:to-blue-600 text-black font-bold py-4 rounded-xl text-lg shadow-[0_0_20px_rgba(0,243,255,0.4)] transition-all active:scale-95 flex justify-center items-center gap-2"
+          className="flex-1 bg-gradient-to-r from-[#00f3ff] to-[#ffaa00] hover:from-[#00f3ff] hover:to-[#ffaa00] text-black font-bold py-4 rounded-xl text-lg shadow-[0_0_20px_rgba(0,243,255,0.4)] transition-all active:scale-95 flex justify-center items-center gap-2"
         >
           <UserPlus size={24} />
           Invite a friend

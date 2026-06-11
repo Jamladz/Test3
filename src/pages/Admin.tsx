@@ -30,19 +30,31 @@ export function Admin() {
   const [stats, setStats] = useState({ totalUsers: 0, totalEconomy: 0, bannedBots: 0, users: [] as any[] });
   const [loading, setLoading] = useState(true);
 
+  const fetchStats = async () => {
+    try {
+      const data = await GameService.getAdminStats();
+      setStats(data);
+    } catch(e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (username === 'sekanedr_is') {
-      GameService.getAdminStats().then(data => {
-         setStats(data);
-         setLoading(false);
-      }).catch(e => {
-         console.error(e);
-         setLoading(false);
-      });
+      fetchStats();
     } else {
        setLoading(false);
     }
   }, [username]);
+
+  const handleBanToggle = async (uid: string, isBanned: boolean) => {
+    if (confirm(`Are you sure you want to ${isBanned ? 'unban' : 'ban'} this user?`)) {
+      await GameService.setBanStatus(uid, !isBanned);
+      fetchStats();
+    }
+  };
 
   if (username !== 'sekanedr_is') {
     return (
@@ -59,7 +71,7 @@ export function Admin() {
       {/* Top Navigation / Header */}
       <div className="flex-none px-6 py-4 flex justify-between items-center bg-[#111114] border-b border-white/5 z-10 relative">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#00f3ff]/20 to-blue-600/20 flex items-center justify-center border border-[#00f3ff]/30 shadow-[0_0_15px_rgba(0,243,255,0.2)]">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#00f3ff]/20 to-[#ffaa00]/20 flex items-center justify-center border border-[#00f3ff]/30 shadow-[0_0_15px_rgba(0,243,255,0.2)]">
             <Settings2 size={20} className="text-[#00f3ff]" />
           </div>
           <div>
@@ -196,7 +208,7 @@ export function Admin() {
           <div className="bg-[#151518] border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-colors">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400">
+                <div className="p-2 bg-[#ffaa00]/10 rounded-lg text-[#ffaa00]">
                   <Zap size={20} />
                 </div>
                 <div>
@@ -256,7 +268,7 @@ export function Admin() {
                       <tr key={u.id || i} className="hover:bg-white/[0.02] transition-colors">
                          <td className="px-5 py-3">
                             <div className="flex items-center gap-3">
-                               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00f3ff]/20 to-blue-600/20 flex items-center justify-center flex-shrink-0 text-white font-bold text-xs ring-1 ring-white/10">
+                               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00f3ff]/20 to-[#ffaa00]/20 flex items-center justify-center flex-shrink-0 text-white font-bold text-xs ring-1 ring-white/10">
                                   {u.firstName?.[0] || '?'}
                                </div>
                                <div>
@@ -285,8 +297,11 @@ export function Admin() {
                             </div>
                          </td>
                          <td className="px-5 py-3 text-right">
-                            <button className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white text-[10px] font-bold uppercase tracking-wider transition-colors border border-white/10 active:scale-95">
-                               View
+                            <button 
+                               onClick={() => handleBanToggle(u.uid, u.role === 'banned')}
+                               className={`px-3 py-1.5 rounded-lg text-white text-[10px] font-bold uppercase tracking-wider transition-colors border border-white/10 active:scale-95 ${u.role === 'banned' ? 'bg-green-500/20 hover:bg-green-500/30 text-green-400' : 'bg-red-500/20 hover:bg-red-500/30 text-red-400'}`}
+                            >
+                               {u.role === 'banned' ? 'Unban' : 'Ban'}
                             </button>
                          </td>
                       </tr>

@@ -155,9 +155,9 @@ export function Game() {
             if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
             setShowAirdropPopup(true);
           }}
-          className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md flex items-center justify-center shadow-lg active:scale-95 transition-all text-[#ff00ea] hover:bg-white/10"
+          className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md flex items-center justify-center shadow-lg active:scale-95 transition-all text-[#ff7b00] hover:bg-white/10"
         >
-          <Wallet size={22} className="drop-shadow-[0_0_8px_rgba(255,0,234,0.8)]" />
+          <Wallet size={22} className="drop-shadow-[0_0_8px_rgba(255,123,0,0.8)]" />
         </button>
         <button 
           onClick={() => {
@@ -409,14 +409,14 @@ export function Game() {
                 <X size={24} />
               </button>
               
-              <div className="w-20 h-20 bg-gradient-to-tr from-[#00f3ff]/20 to-[#ff00ea]/20 rounded-full flex items-center justify-center mb-6 border border-white/10 shadow-[0_0_30px_rgba(255,0,234,0.3)]">
+              <div className="w-20 h-20 bg-gradient-to-tr from-[#00f3ff]/20 to-[#ff7b00]/20 rounded-full flex items-center justify-center mb-6 border border-white/10 shadow-[0_0_30px_rgba(255,123,0,0.3)]">
                 <Wallet size={36} className="text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
               </div>
               
               <h2 className="text-2xl font-bold text-white mb-2">Airdrop Balance</h2>
               
               <div className="flex flex-col items-center justify-center bg-black/40 border border-white/5 rounded-2xl w-full p-6 mb-6">
-                 <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#00f3ff] to-[#ff00ea] drop-shadow-[0_0_10px_rgba(255,0,234,0.3)] mb-2">
+                 <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#00f3ff] to-[#ff7b00] drop-shadow-[0_0_10px_rgba(255,123,0,0.3)] mb-2">
                     {(balance / 10000000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                  </div>
                  <span className="text-xs text-white/50 uppercase tracking-widest font-bold">Plush Tokens</span>
@@ -435,7 +435,7 @@ export function Game() {
                     target.classList.remove("opacity-50", "cursor-not-allowed");
                   }, 2000);
                 }}
-                className="w-full py-4 bg-gradient-to-r from-[#00f3ff] to-[#ff00ea] text-white font-bold rounded-xl shadow-[0_0_15px_rgba(255,0,234,0.4)] hover:brightness-110 active:scale-95 transition-all mb-3 text-lg"
+                className="w-full py-4 bg-gradient-to-r from-[#00f3ff] to-[#ff7b00] text-white font-bold rounded-xl shadow-[0_0_15px_rgba(255,123,0,0.4)] hover:brightness-110 active:scale-95 transition-all mb-3 text-lg"
               >
                 Withdraw
               </button>
@@ -487,7 +487,7 @@ export function Game() {
 
               <button 
                 onClick={() => setShowVaultPopup(false)}
-                className="w-full py-4 bg-gradient-to-r from-[#00f3ff] to-[#00a8ff] text-white font-bold rounded-xl shadow-[0_0_15px_rgba(0,243,255,0.4)] hover:brightness-110 active:scale-95 transition-all text-lg"
+                className="w-full py-4 bg-gradient-to-r from-[#00f3ff] to-[#ffaa00] text-white font-bold rounded-xl shadow-[0_0_15px_rgba(0,243,255,0.4)] hover:brightness-110 active:scale-95 transition-all text-lg"
               >
                 Awesome!
               </button>
