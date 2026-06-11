@@ -42,11 +42,21 @@ interface GameState {
   gramMiningRate: number; // rate per day
   lastGramSync: number;
   gramMiningActiveUntil: number;
+  tonBalance: number;
+  tonMiningRate: number;
+  lastTonSync: number;
+  tonMiningActiveUntil: number;
+  tonAdsWatchedDaily: number;
+  lastTonAdReset: number;
   useSpin: () => void;
   checkSpinReset: () => void;
   upgradeGramMining: (amount: number) => void;
   syncGramMining: () => void;
   startGramMining: () => void;
+  upgradeTonMiningViaAds: () => void;
+  syncTonMining: () => void;
+  startTonMining: () => void;
+  buyTonPackage: (amount: number, multiplier: number) => void;
   gifts: string[];
   addGift: (img: string) => Promise<void>;
 }
@@ -79,6 +89,12 @@ export const useGameStore = create<GameState>()(
   gramMiningRate: 0.0001,
   lastGramSync: Date.now(),
   gramMiningActiveUntil: 0,
+  tonBalance: 0,
+  tonMiningRate: 0.001,
+  lastTonSync: Date.now(),
+  tonMiningActiveUntil: 0,
+  tonAdsWatchedDaily: 0,
+  lastTonAdReset: Date.now(),
   gifts: [],
 
   addGift: async (img: string) => {
@@ -128,6 +144,53 @@ export const useGameStore = create<GameState>()(
       return {
         gramBalance: state.gramBalance + (state.gramMiningRate * diffDays),
         lastGramSync: effectiveNow, // Keep track of the last time we granted coins
+      };
+    }
+    return {};
+  }),
+
+  startTonMining: () => set((state) => {
+    const duration = 24 * 60 * 60 * 1000;
+    return {
+      tonMiningActiveUntil: Date.now() + duration,
+      lastTonSync: Date.now()
+    };
+  }),
+
+  buyTonPackage: (amount: number, multiplier: number) => set((state) => {
+    // Deduct abstract balance (representing stars/TON via api hypothetically if real, but frontend only required)
+    // Actually, user wants paid packages in TON to increase mining speed. This is typically done via stars/TON in a real app, here we can simulate it or just let the button process it via TG stars api later.
+    // For now we'll just apply the multiplier.
+    return {
+      tonMiningRate: state.tonMiningRate + multiplier,
+    };
+  }),
+
+  upgradeTonMiningViaAds: () => set((state) => {
+    const now = Date.now();
+    const isNewDay = new Date(now).getUTCDate() !== new Date(state.lastTonAdReset).getUTCDate();
+    
+    let currentWatched = isNewDay ? 0 : state.tonAdsWatchedDaily;
+    
+    if (currentWatched < 10) {
+      return {
+        tonAdsWatchedDaily: currentWatched + 1,
+        lastTonAdReset: now,
+        tonMiningRate: state.tonMiningRate + 0.00005, // small increase
+      };
+    }
+    return {};
+  }),
+
+  syncTonMining: () => set((state) => {
+    const now = Date.now();
+    const effectiveNow = Math.min(now, state.tonMiningActiveUntil);
+    const diffDays = (effectiveNow - Math.min(state.lastTonSync, state.tonMiningActiveUntil)) / (1000 * 60 * 60 * 24);
+    
+    if (diffDays > 0) {
+      return {
+        tonBalance: state.tonBalance + (state.tonMiningRate * diffDays),
+        lastTonSync: effectiveNow,
       };
     }
     return {};
@@ -201,6 +264,10 @@ export const useGameStore = create<GameState>()(
           gifts: data.gifts || [],
           friendsCount: data.friendsCount || 0,
           adsWatched: data.adsWatched || 0,
+          tonBalance: data.tonBalance || get().tonBalance || 0,
+          tonMiningRate: data.tonMiningRate || get().tonMiningRate || 0.001,
+          lastTonSync: data.lastTonSync || get().lastTonSync || Date.now(),
+          tonMiningActiveUntil: data.tonMiningActiveUntil || get().tonMiningActiveUntil || 0,
           userId,
           username,
           justReferred: !!data._justReferred
@@ -254,7 +321,11 @@ export const useGameStore = create<GameState>()(
           balanceDelta,
           energy: state.energy,
           lastLogin: Date.now(),
-          adsWatched: state.adsWatched
+          adsWatched: state.adsWatched,
+          tonBalance: state.tonBalance,
+          tonMiningRate: state.tonMiningRate,
+          lastTonSync: state.lastTonSync,
+          tonMiningActiveUntil: state.tonMiningActiveUntil,
       });
       
       if (result) {
