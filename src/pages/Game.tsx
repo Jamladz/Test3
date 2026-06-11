@@ -7,6 +7,7 @@ import { audioManager } from '../lib/audio';
 import { CaseOpeningSpinner } from '../components/CaseOpeningSpinner';
 import { GramModal } from '../components/GramModal';
 import { GiftsModal } from '../components/GiftsModal';
+import { TonModal } from '../components/TonModal';
 
 export function Game() {
   const { balance, energy, maxEnergy, tapMultiplier, addBalance, reduceEnergy, increaseEnergy, offlineEarnings, claimOfflineEarnings } = useGameStore();
@@ -17,6 +18,7 @@ export function Game() {
   const [showAirdropPopup, setShowAirdropPopup] = useState(false);
   const [showVaultPopup, setShowVaultPopup] = useState(false);
   const [showGramModal, setShowGramModal] = useState(false);
+  const [showTonModal, setShowTonModal] = useState(false);
   const [showGiftsModal, setShowGiftsModal] = useState(false);
   const [showGoToSpinPopup, setShowGoToSpinPopup] = useState(false);
 
@@ -124,6 +126,16 @@ export function Game() {
           className="w-12 h-12 rounded-2xl active:scale-95 transition-all relative overflow-hidden group shadow-[0_0_15px_rgba(0,243,255,0.3)] bg-transparent"
         >
           <img src="https://i.suar.me/4zynX/l" alt="Gifts" className="w-full h-full object-contain" />
+        </button>
+        <button 
+          onClick={() => {
+            const twa = (window as any).Telegram?.WebApp;
+            if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
+            setShowTonModal(true);
+          }}
+          className="w-12 h-12 rounded-2xl active:scale-95 transition-all relative overflow-hidden group shadow-[0_0_15px_rgba(0,243,255,0.3)] bg-transparent mt-2"
+        >
+          <img src="https://i.suar.me/9zy98/l" alt="TON Mining" className="w-full h-full object-contain" />
         </button>
       </div>
 
@@ -545,6 +557,9 @@ export function Game() {
 
       <AnimatePresence>
          {showGramModal && <GramModal onClose={() => setShowGramModal(false)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+         {showTonModal && <TonModal onClose={() => setShowTonModal(false)} />}
       </AnimatePresence>
       <AnimatePresence>
         {showGiftsModal && <GiftsModal onClose={() => setShowGiftsModal(false)} />}

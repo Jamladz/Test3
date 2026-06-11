@@ -17,7 +17,7 @@ export function Friends() {
   const [friendsList, setFriendsList] = useState<ReferralDoc[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const getInviteLink = () => `https://t.me/PlushTap_bot?startapp=ref${userId}`;
+  const getInviteLink = () => `https://t.me/PlushTap_bot/app?startapp=ref${userId}`;
 
   useEffect(() => {
     if (!userId) return;
