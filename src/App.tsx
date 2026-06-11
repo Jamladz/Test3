@@ -93,6 +93,21 @@ export default function App() {
     );
   }
 
+  if (role === 'banned') {
+    return (
+      <div className="flex flex-col h-[100dvh] bg-[#000000] text-white w-full sm:max-w-md sm:mx-auto relative overflow-hidden items-center justify-center px-6 text-center shadow-2xl sm:border-x sm:border-white/5">
+        <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.3)]">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]">
+            <path d="M18 6L6 18M6 6l12 12"></path>
+          </svg>
+        </div>
+        <h1 className="text-3xl font-black text-white mb-4" dir="rtl">تم حظرك للنصب والإحتيال</h1>
+        <p className="text-red-400 font-bold mb-2">Ban Reason / سبب الحظر</p>
+        <p className="text-gray-400 text-sm" dir="rtl">تم حظرك لانك قمت بالغش بطريقة إحترافية</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-[100dvh] bg-[#000000] text-white w-full sm:max-w-md sm:mx-auto relative overflow-hidden shadow-2xl sm:border-x sm:border-white/5">
       {/* Background ambient light */}
