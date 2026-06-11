@@ -32,7 +32,8 @@ export function ReferralSuccessModal() {
             
             <p className="text-gray-400 text-sm mb-6 leading-relaxed">
               You were successfully referred! <br/>
-              <strong className="text-[#FFD700]">+50,000 Coins</strong> have been added to your balance.
+              <strong className="text-[#FFD700]">+1,000,000 Coins</strong> and <br/>
+              <strong className="text-[#00f3ff] inline-flex items-center gap-1 mt-1"><img src="https://i.suar.me/MpXLm/l" alt="TON" className="w-4 h-4 object-contain drop-shadow-[0_0_5px_rgba(0,243,255,0.8)]" /> +0.5 TON</strong> have been added to your balance.
             </p>
 
             <button
