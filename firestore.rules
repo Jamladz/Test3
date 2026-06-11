@@ -78,7 +78,7 @@ service cloud.firestore {
     
     // Referrals (Managed entirely by Cloudflare Worker via Admin SDK)
     match /referrals/{referralId} {
-       allow read: if isSignedIn() && (isOwner(referralId) || resource.data.referrerId == request.auth.uid);
+       allow read: if isSignedIn() && (isOwner(referralId) || resource.data.referrerId == request.auth.uid || resource.data.referrerTelegramId == request.auth.uid);
        allow write: if false; // Only manageable via Cloudflare Worker
     }
   }
