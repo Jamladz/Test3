@@ -17,7 +17,7 @@ async function startServer() {
   app.use(express.json());
 
   // API constraints for Telegram Mini Apps
-  const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || 'mock_token_for_dev';
+  const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8628933356:AAHJpX7FI4OMBZfMaB-pc4q9uwO0NLW3Ps0';
 
   function verifyTelegramWebAppData(telegramInitData: string): boolean {
     if (telegramInitData === 'mock' || telegramInitData.includes('mock')) return true; // For local dev
