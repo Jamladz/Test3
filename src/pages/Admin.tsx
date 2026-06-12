@@ -56,6 +56,13 @@ export function Admin() {
     }
   };
 
+  const handleConfirmWithdrawal = async (uid: string, withdrawalId: string) => {
+    if (confirm(`Confirm you sent TON to their wallet?`)) {
+      await GameService.confirmWithdrawal(uid, withdrawalId);
+      fetchStats();
+    }
+  };
+
   if (username !== 'sekanedr_is') {
     return (
       <div className="flex flex-col items-center justify-center flex-1 w-full p-6 text-center">
@@ -202,6 +209,32 @@ export function Admin() {
           </div>
         </div>
 
+        {/* Pending Withdrawals */}
+        <h2 className="font-bold text-sm tracking-widest text-gray-400 mt-6 mb-2">PENDING WITHDRAWALS</h2>
+        <div className="bg-[#151518] border border-white/5 rounded-2xl relative overflow-hidden flex flex-col max-h-[300px]">
+           <div className="overflow-y-auto custom-scroll w-full flex-1 p-4 space-y-3">
+              {stats.users.flatMap(u => (u.withdrawals || []).map((w: any) => ({...w, user: u}))).filter(w => w.status === 'pending').length === 0 ? (
+                 <div className="text-center text-sm text-gray-500 py-4">No pending withdrawals</div>
+              ) : (
+                 stats.users.flatMap(u => (u.withdrawals || []).map((w: any) => ({...w, user: u}))).filter(w => w.status === 'pending').map((w: any) => (
+                    <div key={w.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white/5 border border-white/10 p-4 rounded-xl gap-4">
+                       <div className="w-full">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="text-white font-bold">{w.user.firstName} (@{w.user.username})</div>
+                            <div className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded uppercase font-bold tracking-wider">Under Review</div>
+                          </div>
+                          <div className="text-[#00f3ff] font-bold my-1 text-lg">{w.amount} {w.token || 'TON'}</div>
+                          <div className="text-xs text-gray-400 font-mono mt-2 break-all bg-[#111114] p-2 rounded-lg border border-white/5">Wallet: {w.wallet}</div>
+                       </div>
+                       <button onClick={() => handleConfirmWithdrawal(w.user.uid, w.id)} className="w-full sm:w-auto bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/50 hover:bg-green-500/30 text-green-400 font-bold text-xs px-6 py-3 rounded-xl whitespace-nowrap transition-all shadow-[0_0_15px_rgba(34,197,94,0.1)] active:scale-95">
+                          Mark as Completed
+                       </button>
+                    </div>
+                 ))
+              )}
+           </div>
+        </div>
+
         {/* Global Controls */}
         <h2 className="font-bold text-sm tracking-widest text-gray-400 mt-6 mb-2">SYSTEM CONTROLS</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-10">
@@ -257,6 +290,7 @@ export function Admin() {
                    <tr>
                       <th className="px-5 py-3 font-medium">Player</th>
                       <th className="px-5 py-3 font-medium">Telegram ID</th>
+                      <th className="px-5 py-3 font-medium text-center">Joined Date</th>
                       <th className="px-5 py-3 font-medium text-center">Ads Watched</th>
                       <th className="px-5 py-3 font-medium text-right">Tap Value</th>
                       <th className="px-5 py-3 font-medium text-right">Total Balance</th>
@@ -278,6 +312,16 @@ export function Admin() {
                             </div>
                          </td>
                          <td className="px-5 py-3 text-gray-400 font-mono text-xs">{u.id}</td>
+                         <td className="px-5 py-3 text-center">
+                            {u.createdAt ? (
+                              <div className="flex flex-col items-center">
+                                 <span className="text-gray-300 font-bold text-xs">{new Date(u.createdAt).toLocaleDateString()}</span>
+                                 <span className="text-gray-500 font-mono text-[10px]">{new Date(u.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-600 font-mono text-xs italic">Legacy User</span>
+                            )}
+                         </td>
                          <td className="px-5 py-3 text-center">
                             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#00f3ff]/10 text-[#00f3ff] font-mono text-xs font-bold border border-[#00f3ff]/20">
                                <Zap size={12} className="text-[#00f3ff]" />

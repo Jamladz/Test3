@@ -39,6 +39,14 @@ const TASKS = [
     url: "https://t.me/tonnel_network_bot/gifts?startapp=ref_1368899842",
   },
   {
+    id: "4",
+    title: "Hot Labs App",
+    reward: 200000,
+    icon: Send,
+    color: "text-[#0088cc]",
+    url: "https://app.hot-labs.org/link?699428uu",
+  },
+  {
     id: "ref_1",
     title: "Invite 1 Friend",
     reward: 1000000,
