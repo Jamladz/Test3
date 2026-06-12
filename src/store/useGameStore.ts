@@ -48,6 +48,8 @@ interface GameState {
   tonMiningActiveUntil: number;
   tonAdsWatchedDaily: number;
   lastTonAdReset: number;
+  withdrawals: any[];
+  requestWithdrawal: (tokenAmount: number, coinCost: number, wallet: string) => Promise<void>;
   useSpin: () => void;
   checkSpinReset: () => void;
   upgradeGramMining: (amount: number) => void;
@@ -95,6 +97,7 @@ export const useGameStore = create<GameState>()(
   tonMiningActiveUntil: 0,
   tonAdsWatchedDaily: 0,
   lastTonAdReset: Date.now(),
+  withdrawals: [],
   gifts: [],
 
   addGift: async (img: string) => {
@@ -205,6 +208,22 @@ export const useGameStore = create<GameState>()(
     return {};
   }),
 
+  requestWithdrawal: async (tokenAmount: number, coinCost: number, wallet: string) => {
+    const state = get();
+    if (!state.firebaseUid || state.balance < coinCost) return;
+    
+    try {
+      const newWithdrawal = await GameService.requestWithdrawal(state.firebaseUid, tokenAmount, coinCost, wallet);
+      set(s => ({
+        balance: s.balance - coinCost,
+        syncedBalance: s.syncedBalance - coinCost,
+        withdrawals: [newWithdrawal, ...(s.withdrawals || [])]
+      }));
+    } catch(e) {
+      console.error(e);
+    }
+  },
+
   useSpin: () => set((state) => ({ 
     spinsLeft: Math.max(0, state.spinsLeft - 1),
     totalSpins: state.totalSpins + 1 
@@ -281,6 +300,7 @@ export const useGameStore = create<GameState>()(
           gramMiningRate: data.gramMiningRate || get().gramMiningRate || 0.0001,
           lastGramSync: data.lastGramSync || get().lastGramSync || Date.now(),
           gramMiningActiveUntil: data.gramMiningActiveUntil || get().gramMiningActiveUntil || 0,
+          withdrawals: data.withdrawals || [],
           userId,
           username,
           justReferred: !!data._justReferred
