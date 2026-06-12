@@ -108,9 +108,18 @@ export const GameService = {
               lastLogin: deltas.lastLogin || Date.now(),
               adsWatched: newAds
           };
-          if (deltas.gifts) {
-              updates.gifts = deltas.gifts;
-          }
+          if (deltas.gifts) updates.gifts = deltas.gifts;
+          
+          if (deltas.tonBalance !== undefined) updates.tonBalance = deltas.tonBalance;
+          if (deltas.tonMiningRate !== undefined) updates.tonMiningRate = deltas.tonMiningRate;
+          if (deltas.lastTonSync !== undefined) updates.lastTonSync = deltas.lastTonSync;
+          if (deltas.tonMiningActiveUntil !== undefined) updates.tonMiningActiveUntil = deltas.tonMiningActiveUntil;
+          
+          if (deltas.gramBalance !== undefined) updates.gramBalance = deltas.gramBalance;
+          if (deltas.gramMiningRate !== undefined) updates.gramMiningRate = deltas.gramMiningRate;
+          if (deltas.lastGramSync !== undefined) updates.lastGramSync = deltas.lastGramSync;
+          if (deltas.gramMiningActiveUntil !== undefined) updates.gramMiningActiveUntil = deltas.gramMiningActiveUntil;
+          
           console.log("SYNC UPDATES:", updates);
           console.log("DIFF KEYS:", Object.keys(updates));
           transaction.update(userRef, updates);
