@@ -1,6 +1,6 @@
 import { auth, db } from '../lib/firebase';
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, increment, collection, setDoc as setRef, query, where, getDocs, getCountFromServer, runTransaction, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, increment, collection, setDoc as setRef, query, where, getDocs, getCountFromServer, runTransaction, serverTimestamp, arrayUnion } from 'firebase/firestore';
 
 export const AuthService = {
   // Returns a firebase user UID
@@ -59,6 +59,8 @@ export const GameService = {
              username: username || '',
              firstName: firstName || 'Anonymous',
              balance: initialBalance,
+             createdAt: Date.now(),
+             withdrawals: [],
              tonBalance: 0.5,
              energy: 1500,
              maxEnergy: 1500,
@@ -173,6 +175,42 @@ export const GameService = {
     // Sort users by balance descended
     usersList.sort((a,b) => (b.balance || 0) - (a.balance || 0));
     return { totalUsers: usersList.length, totalEconomy, bannedBots, users: usersList };
+  },
+
+  async requestWithdrawal(uid: string, tokenAmount: number, coinCost: number, wallet: string) {
+    const userRef = doc(db, 'users', uid);
+    const newWithdrawal = {
+      id: Date.now().toString(),
+      amount: tokenAmount,
+      token: 'PLUSH',
+      wallet,
+      status: 'pending',
+      timestamp: Date.now()
+    };
+    
+    await updateDoc(userRef, {
+       balance: increment(-coinCost),
+       withdrawals: arrayUnion(newWithdrawal)
+    });
+    return newWithdrawal;
+  },
+
+  async confirmWithdrawal(uid: string, withdrawalId: string) {
+    const userRef = doc(db, 'users', uid);
+    try {
+      await runTransaction(db, async (t) => {
+         const snap = await t.get(userRef);
+         if(!snap.exists()) return;
+         const data = snap.data();
+         const withdrawals = data.withdrawals || [];
+         const updated = withdrawals.map((w: any) => 
+           w.id === withdrawalId ? { ...w, status: 'completed' } : w
+         );
+         t.update(userRef, { withdrawals: updated });
+      });
+    } catch(e) {
+      console.error("Failed to confirm withdrawal", e);
+    }
   },
 
   async updateWallet(uid: string, address: string) {
