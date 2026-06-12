@@ -24,11 +24,9 @@ service cloud.firestore {
 
     // User Schema Validation
     function isValidUser(data) {
-      return data.keys().hasAll(['id', 'username', 'balance', 'energy', 'maxEnergy', 'profitPerHour', 'lastLogin']) 
+      return data.keys().hasAll(['id', 'balance', 'energy', 'lastLogin']) 
         && data.balance is number 
         && data.energy is number 
-        && data.maxEnergy is number 
-        && data.profitPerHour is number 
         && data.lastLogin is number;
     }
 
@@ -45,32 +43,31 @@ service cloud.firestore {
       allow update: if (isOwner(userId) && isValidUser(incoming()) && (
         // Action: standard sync (balance increases, energy decreases/regenerates)
         (
-          incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'energy', 'lastLogin', 'offlineEarnings', 'friendsCount', 'adsWatched', 'referredBy', 'referralRewardClaimed', 'upgrades', 'missions', 'totalTapped', 'gifts'])
+          incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'energy', 'lastLogin', 'offlineEarnings', 'friendsCount', 'adsWatched', 'referredBy', 'referralRewardClaimed', 'upgrades', 'missions', 'totalTapped', 'gifts', 'createdAt', 'tonBalance', 'tonMiningRate', 'lastTonSync', 'tonMiningActiveUntil', 'tonAdsWatchedDaily', 'lastTonAdReset', 'gramBalance', 'gramMiningRate', 'lastGramSync', 'gramMiningActiveUntil', 'withdrawals'])
           && incoming().balance >= existing().balance
         )
         ||
         // Action: buy upgrade (balance decreases, profitPerHour increases)
         (
-          incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'profitPerHour', 'upgrades'])
-          && incoming().balance < existing().balance
-          && incoming().profitPerHour >= existing().profitPerHour
+          incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'profitPerHour', 'upgrades', 'tonBalance', 'tonMiningRate', 'lastTonSync', 'tonMiningActiveUntil', 'gramBalance', 'gramMiningRate', 'lastGramSync', 'gramMiningActiveUntil', 'withdrawals'])
+          && incoming().balance <= existing().balance
         )
         ||
         // Action: Claim Task
         (
-          incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'missions'])
+          incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'missions', 'tonBalance', 'gramBalance'])
           && incoming().balance >= existing().balance
         )
         || 
         // Action: Ads / Referrals
         (
-          incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'adsWatched', 'friendsCount'])
+          incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'adsWatched', 'friendsCount', 'tonBalance', 'tonMiningRate', 'tonMiningActiveUntil'])
           && incoming().balance >= existing().balance
         )
         ||
-        // Action: Wallet
+        // Action: Wallet / Withdrawing
         (
-           incoming().diff(existing()).affectedKeys().hasOnly(['walletAddress'])
+           incoming().diff(existing()).affectedKeys().hasOnly(['walletAddress', 'withdrawals', 'tonBalance'])
         )
       )) 
       || isAdmin();
