@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { formatCurrency } from '../lib/utils';
-import { Settings, Coins } from 'lucide-react';
+import { Settings, Coins, Bell } from 'lucide-react';
 import { TonConnectButton, useTonWallet } from '@tonconnect/ui-react';
 import { GameService } from '../services/api';
 import { ProfileModal } from './ProfileModal';
-import { AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export function Header() {
   const { profitPerHour, username, firebaseUid, balance } = useGameStore();
   const wallet = useTonWallet();
   const [showProfile, setShowProfile] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
 
   const LEVELS = [
     { name: 'Bronze', min: 0 },
@@ -44,31 +45,81 @@ export function Header() {
 
   return (
     <>
-    <div className="flex flex-col gap-2 p-3 pt-1 mb-0 z-10 relative shrink-0">
+    <div className="flex flex-col gap-2 p-3 pt-1 mb-0 z-[100] relative shrink-0">
       <div className="flex justify-between items-center w-full">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-[#FFD700] to-[#E6C200] p-0.5 shadow-[0_4px_10px_rgba(255,215,0,0.3)] shrink-0">
-            <div className="w-full h-full rounded-[6px] bg-[#1c1c1e] flex items-center justify-center overflow-hidden">
+        
+        <button onClick={() => setShowProfile(true)} className="group flex items-center gap-3 bg-white/5 border border-white/10 p-1.5 pr-4 rounded-full hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer text-left active:scale-95 shadow-lg relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:animate-[shimmer_1.5s_infinite]" />
+          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#FFD700] to-[#E6C200] p-[2px] shadow-[0_0_15px_rgba(255,215,0,0.3)] shrink-0 select-none">
+            <div className="w-full h-full rounded-full bg-[#1c1c1e] flex items-center justify-center overflow-hidden border-2 border-black">
               <img src="https://i.suar.me/X9N3J/l" alt="PlushTap" className="w-full h-full object-cover" />
             </div>
           </div>
           <div className="flex flex-col min-w-[80px]">
-            <h2 onClick={() => setShowProfile(true)} className="font-bold text-xs tracking-wide text-white truncate cursor-pointer hover:text-[#00f3ff] transition-colors">{username || 'Player1'}</h2>
-            {/* Level progress bar */}
-            <div className="flex items-center justify-between mt-1 gap-2">
-               <span className="text-[10px] font-bold text-gray-400 capitalize">{currentLevel.name}</span>
-               <span className="text-[10px] font-bold text-gray-500">{currentLevelIdx + 1}/{LEVELS.length}</span>
-            </div>
-            <div className="w-full h-1.5 bg-[#1c1c1e] rounded-full overflow-hidden mt-0.5 border border-white/5">
-              <div 
-                className="h-full bg-gradient-to-r from-[#ffaa00] to-[#00f3ff] transition-all duration-300" 
-                style={{ width: `${progressToNext}%` }}
-              />
+            <h2 className="font-bold text-[13px] tracking-wide text-white truncate group-hover:text-[#00f3ff] transition-colors flex items-center gap-1.5">
+               {username || 'Player1'}
+               <span className="w-1.5 h-1.5 rounded-full bg-[#00f3ff] shadow-[0_0_8px_#00f3ff]"></span>
+            </h2>
+            <div className="flex items-center gap-1 mt-0.5">
+               <span className="text-[10px] font-bold text-[#FFD700] uppercase tracking-wider">{currentLevel.name}</span>
+               <span className="text-[9px] font-bold text-white/40">Lvl {currentLevelIdx + 1}</span>
             </div>
           </div>
-        </div>
+        </button>
 
-        <div className="flex justify-end gap-2 items-center scale-[0.85] origin-right ml-auto">
+        <div className="flex justify-end gap-2 items-center scale-[0.85] origin-right ml-auto relative">
+          <div className="relative">
+            <button 
+              onClick={() => setShowNotification(!showNotification)}
+              className="relative w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center mr-2 hover:bg-white/20 transition-colors"
+            >
+               <Bell size={20} className="text-white" />
+               {balance >= 10000000 && (
+                 <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                   <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                 </span>
+               )}
+            </button>
+            
+            <AnimatePresence>
+              {showNotification && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                  className="absolute top-12 right-0 bg-[#2c2c2e] border border-red-500/30 shadow-2xl rounded-2xl w-64 p-4 z-[100] origin-top-right flex flex-col gap-2"
+                >
+                   <div className="flex justify-between items-center mb-1">
+                      <span className="text-white font-bold text-sm tracking-wide">Notifications</span>
+                      {balance >= 10000000 && <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]"></div>}
+                   </div>
+                   
+                   {balance >= 10000000 ? (
+                     <button 
+                       onClick={() => {
+                          const event = new Event('openAirdrop');
+                          window.dispatchEvent(event);
+                          setShowNotification(false);
+                       }}
+                       className="bg-[#1c1c1e] hover:bg-[#3c3c3e] transition-colors border border-white/5 rounded-xl p-3 text-left w-full shadow-inner group"
+                     >
+                        <h4 className="text-red-400 font-bold text-sm mb-1 group-hover:drop-shadow-[0_0_5px_rgba(239,68,68,0.5)] transition-all">Withdrawal Available</h4>
+                        <p className="text-white/70 text-xs leading-relaxed">
+                          You can withdraw your <strong className="text-white">Plush Token</strong> now! Click here to open the withdrawal page.
+                        </p>
+                     </button>
+                   ) : (
+                     <div className="bg-[#1c1c1e] border border-white/5 rounded-xl p-3 text-center w-full shadow-inner">
+                        <p className="text-white/50 text-xs py-2">
+                           No new notifications. Reach 10M coins to unlock withdrawals!
+                        </p>
+                     </div>
+                   )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           <TonConnectButton />
         </div>
       </div>

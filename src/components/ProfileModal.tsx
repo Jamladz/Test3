@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore } from '../store/useGameStore';
-import { X, User, Play, MonitorPlay, Users } from 'lucide-react';
+import { X, User, Play, MonitorPlay, Users, Loader2 } from 'lucide-react';
 import { formatCurrency } from '../lib/utils';
+import { useTonConnectUI } from '@tonconnect/ui-react';
 
 interface ProfileModalProps {
   onClose: () => void;
 }
 
 export function ProfileModal({ onClose }: ProfileModalProps) {
-  const { username, balance, adsWatched, totalSpins, friendsCount } = useGameStore();
+  const { username, balance, adsWatched, totalSpins, friendsCount, requestWithdrawal, withdrawals } = useGameStore();
 
   return (
     <motion.div 
@@ -78,20 +79,24 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
            </div>
         </div>
 
-        <button 
-          onClick={(e) => {
-            const btn = e.currentTarget;
-            btn.innerText = "Coming Soon";
-            btn.classList.add("opacity-50");
-            setTimeout(() => {
-              btn.innerText = "Reward";
-              btn.classList.remove("opacity-50");
-            }, 2000);
-          }}
-          className="w-full py-4 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 active:scale-95 transition-all text-sm"
-        >
-          Reward
-        </button>
+
+        
+        {withdrawals && withdrawals.filter(w => w.token === 'PLUSH').length > 0 && (
+           <div className="mt-4 space-y-2">
+              <h4 className="text-white/70 font-bold text-xs uppercase tracking-widest text-left mb-2">History</h4>
+              {withdrawals.filter(w => w.token === 'PLUSH').slice(0, 5).map((w: any) => (
+                 <div key={w.id} className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/10">
+                    <span className="text-white/70 font-mono text-xs">{new Date(w.timestamp).toLocaleDateString()}</span>
+                    <span className="text-white font-bold text-sm">{w.amount} PLUSH</span>
+                    {w.status === 'pending' ? (
+                       <span className="text-yellow-400 text-[10px] uppercase tracking-wider font-bold bg-yellow-400/10 px-2 py-1 rounded-md">Pending</span>
+                    ) : (
+                       <span className="text-green-400 text-[10px] uppercase tracking-wider font-bold bg-green-400/10 px-2 py-1 rounded-md">Completed</span>
+                    )}
+                 </div>
+              ))}
+           </div>
+        )}
       </motion.div>
     </motion.div>
   );
