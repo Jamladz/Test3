@@ -96,14 +96,38 @@ export default function App() {
   if (role === 'banned') {
     return (
       <div className="flex flex-col h-[100dvh] bg-[#000000] text-white w-full sm:max-w-md sm:mx-auto relative overflow-hidden items-center justify-center px-6 text-center shadow-2xl sm:border-x sm:border-white/5">
-        <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.3)]">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]">
-            <path d="M18 6L6 18M6 6l12 12"></path>
-          </svg>
+        <div className="absolute inset-0 bg-red-900/5 z-0"></div>
+        <div className="z-10 flex flex-col items-center w-full">
+            <div className="w-24 h-24 bg-red-500/10 rounded-[28px] flex items-center justify-center mb-8 border border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.2)] relative">
+              <div className="absolute inset-0 bg-red-500/5 blur-xl rounded-full"></div>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_0_10px_rgba(239,68,68,0.8)] relative z-10">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+              </svg>
+            </div>
+            
+            <div className="inline-flex items-center gap-2 bg-red-500/10 border border-red-500/20 px-4 py-1.5 rounded-full mb-6 text-red-500 text-xs font-bold uppercase tracking-widest shadow-[0_0_10px_rgba(239,68,68,0.1)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-[pulse_2s_ease-in-out_infinite]"></span>
+                Account Suspended
+            </div>
+            
+            <h1 className="text-3xl font-black text-white mb-4 tracking-tight">Access Prohibited</h1>
+            
+            <p className="text-white/60 text-sm mb-8 leading-relaxed px-2">
+               Your account has been permanently suspended due to severe violations of our Terms of Service. Fraudulent activity degrades the experience for our fair community.
+            </p>
+            
+            <div className="bg-[#111114] w-full border border-white/5 rounded-[24px] p-6 mb-8 shadow-inner relative overflow-hidden text-left">
+               <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500 shadow-[0_0_10px_#ef4444]"></div>
+               <p className="text-white/40 text-[10px] uppercase tracking-widest mb-2 font-bold">Reason for Action</p>
+               <p className="text-white/80 text-sm font-medium leading-relaxed">Systematic exploitation and fraudulent mechanics detected on this account.</p>
+               
+               <div className="mt-5 pt-5 border-t border-white/5 flex justify-between items-center bg-black/20 -mx-6 -mb-6 px-6 py-4">
+                  <span className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Status</span>
+                  <span className="text-red-400 text-[11px] font-bold tracking-widest uppercase bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">Permanent Ban</span>
+               </div>
+            </div>
         </div>
-        <h1 className="text-3xl font-black text-white mb-4" dir="rtl">تم حظرك للنصب والإحتيال</h1>
-        <p className="text-red-400 font-bold mb-2">Ban Reason / سبب الحظر</p>
-        <p className="text-gray-400 text-sm" dir="rtl">تم حظرك لانك قمت بالغش بطريقة إحترافية</p>
       </div>
     );
   }
