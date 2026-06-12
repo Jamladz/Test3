@@ -122,17 +122,26 @@ export const useGameStore = create<GameState>()(
     };
   }),
 
-  upgradeGramMining: (amount: number) => set((state) => {
+  upgradeGramMining: async (amount: number) => {
+    const state = get();
     if (state.balance >= amount && amount >= 100000000) {
+      if (!state.firebaseUid) return;
       const increase = (amount / 100000000) * 0.00005;
-      return {
-        balance: state.balance - amount,
-        syncedBalance: state.syncedBalance - amount,
-        gramMiningRate: state.gramMiningRate + increase,
-      };
+      
+      try {
+        await GameService.addBalance(state.firebaseUid, -amount, {
+          gramMiningRate: state.gramMiningRate + increase
+        });
+        set(s => ({
+          balance: Math.max(0, s.balance - amount),
+          syncedBalance: Math.max(0, s.syncedBalance - amount),
+          gramMiningRate: s.gramMiningRate + increase,
+        }));
+      } catch (e) {
+        console.error(e);
+      }
     }
-    return {};
-  }),
+  },
 
   syncGramMining: () => set((state) => {
     const now = Date.now();
@@ -268,6 +277,10 @@ export const useGameStore = create<GameState>()(
           tonMiningRate: data.tonMiningRate || get().tonMiningRate || 0.001,
           lastTonSync: data.lastTonSync || get().lastTonSync || Date.now(),
           tonMiningActiveUntil: data.tonMiningActiveUntil || get().tonMiningActiveUntil || 0,
+          gramBalance: data.gramBalance || get().gramBalance || 0,
+          gramMiningRate: data.gramMiningRate || get().gramMiningRate || 0.0001,
+          lastGramSync: data.lastGramSync || get().lastGramSync || Date.now(),
+          gramMiningActiveUntil: data.gramMiningActiveUntil || get().gramMiningActiveUntil || 0,
           userId,
           username,
           justReferred: !!data._justReferred
@@ -326,6 +339,10 @@ export const useGameStore = create<GameState>()(
           tonMiningRate: state.tonMiningRate,
           lastTonSync: state.lastTonSync,
           tonMiningActiveUntil: state.tonMiningActiveUntil,
+          gramBalance: state.gramBalance,
+          gramMiningRate: state.gramMiningRate,
+          lastGramSync: state.lastGramSync,
+          gramMiningActiveUntil: state.gramMiningActiveUntil,
       });
       
       if (result) {
