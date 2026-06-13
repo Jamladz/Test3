@@ -224,7 +224,25 @@ export function Admin() {
                             <div className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded uppercase font-bold tracking-wider">Under Review</div>
                           </div>
                           <div className="text-[#00f3ff] font-bold my-1 text-lg">{w.amount} {w.token || 'TON'}</div>
-                          <div className="text-xs text-gray-400 font-mono mt-2 break-all bg-[#111114] p-2 rounded-lg border border-white/5">Wallet: {w.wallet}</div>
+                          <div className="text-xs text-gray-400 font-mono mt-2 bg-[#111114] p-2 rounded-lg border border-white/5 flex items-center justify-between group">
+                             <span className="truncate mr-2" title={w.wallet !== 'UnknownWallet' ? w.wallet : (w.user.walletAddress || 'UnknownWallet')}>Wallet: {w.wallet !== 'UnknownWallet' ? w.wallet : (w.user.walletAddress || 'UnknownWallet')}</span>
+                             <button
+                               onClick={() => {
+                                 const walletToCopy = w.wallet !== 'UnknownWallet' ? w.wallet : (w.user.walletAddress || 'UnknownWallet');
+                                 navigator.clipboard.writeText(walletToCopy).then(() => {
+                                   const twa = (window as any).Telegram?.WebApp;
+                                   if (twa?.HapticFeedback) twa.HapticFeedback.impactOccurred('light');
+                                   alert('Wallet address copied to clipboard!');
+                                 }).catch(() => {
+                                   alert('Failed to copy. ' + walletToCopy);
+                                 });
+                               }}
+                               className="p-1.5 bg-white/5 hover:bg-white/10 rounded-md transition-all active:scale-95 text-gray-400 hover:text-white shrink-0 opacity-80 group-hover:opacity-100"
+                               title="Copy Wallet Address"
+                             >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                             </button>
+                          </div>
                        </div>
                        <button onClick={() => handleConfirmWithdrawal(w.user.uid, w.id)} className="w-full sm:w-auto bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/50 hover:bg-green-500/30 text-green-400 font-bold text-xs px-6 py-3 rounded-xl whitespace-nowrap transition-all shadow-[0_0_15px_rgba(34,197,94,0.1)] active:scale-95">
                           Mark as Completed
