@@ -442,20 +442,23 @@ export function Game() {
               <h2 className="text-2xl font-black text-white mb-2 tracking-tight text-center">Airdrop Withdrawal</h2>
               <p className="text-white/50 text-center text-xs sm:text-sm mb-6 px-2 sm:px-4 leading-relaxed">Convert your in-game coins to real PLUSH tokens. Enter your TON wallet address below to receive your airdrop.</p>
               
-              <div className="flex flex-col items-center justify-center bg-[#1c1c1e] border border-white/5 rounded-[24px] w-full p-5 mb-5 relative overflow-hidden">
-                 <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#00f3ff]/10 blur-3xl rounded-full"></div>
-                 <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full"></div>
+              <div className="flex flex-col items-center justify-center bg-[#1c1c1e]/80 border-2 border-white/5 shadow-lg rounded-[28px] w-full py-8 px-5 mb-5 relative overflow-hidden">
+                 <div className="absolute -top-12 -right-12 w-40 h-40 bg-[#00f3ff]/20 blur-3xl rounded-full"></div>
+                 <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-blue-500/20 blur-3xl rounded-full"></div>
                  
-                 <div className="flex items-baseline justify-center gap-2 mb-2">
-                    <span className="text-5xl sm:text-6xl font-black text-white tracking-tighter drop-shadow-sm py-1">
-                      {Math.floor(balance / 10000000).toLocaleString()}
-                    </span>
-                    <span className="text-xl sm:text-2xl font-bold text-[#00f3ff] drop-shadow-[0_0_8px_rgba(0,243,255,0.5)]">
-                      $PLUSH
-                    </span>
+                 <div className="flex flex-col items-center justify-center gap-1 mb-4 relative z-10 w-full px-2">
+                    <span className="text-white/50 text-xs font-bold uppercase tracking-widest mb-1">Available Balance</span>
+                    <div className="flex items-baseline justify-center gap-2 w-full overflow-hidden">
+                      <span className="text-4xl sm:text-5xl font-black text-white tracking-tighter drop-shadow-lg py-1 truncate">
+                        {Math.floor(balance / 10000000).toLocaleString()}
+                      </span>
+                      <span className="text-xl sm:text-2xl font-bold text-[#00f3ff] drop-shadow-[0_0_12px_rgba(0,243,255,0.5)] shrink-0">
+                        $PLUSH
+                      </span>
+                    </div>
                  </div>
                  
-                 <div className="mt-3 flex items-center gap-2 bg-[#111114] px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/5">
+                 <div className="mt-2 flex items-center gap-2 bg-[#111114] px-4 py-2 rounded-full border border-white/10 relative z-10 shadow-inner">
                    <div className="w-2 h-2 rounded-full bg-[#00f3ff] animate-pulse"></div>
                    <span className="text-[10px] sm:text-xs text-white/50 font-medium tracking-wide">Rate: 10,000,000 Coins = 1 PLUSH</span>
                  </div>
