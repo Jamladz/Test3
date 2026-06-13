@@ -45,24 +45,24 @@ export function Header() {
 
   return (
     <>
-    <div className="flex flex-col gap-2 p-3 pt-1 mb-0 z-[100] relative shrink-0">
+    <div className="flex flex-col gap-2 p-3 pt-1 mb-0 z-40 relative shrink-0">
       <div className="flex justify-between items-center w-full">
         
-        <button onClick={() => setShowProfile(true)} className="group flex items-center gap-3 bg-white/5 border border-white/10 p-1.5 pr-4 rounded-full hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer text-left active:scale-95 shadow-lg relative overflow-hidden">
+        <button onClick={() => setShowProfile(true)} className="group flex items-center gap-3 bg-white/5 border border-white/10 p-2 pl-2 pr-5 rounded-2xl hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer text-left active:scale-95 shadow-lg relative overflow-hidden w-full max-w-[220px]">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:animate-[shimmer_1.5s_infinite]" />
-          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#FFD700] to-[#E6C200] p-[2px] shadow-[0_0_15px_rgba(255,215,0,0.3)] shrink-0 select-none">
-            <div className="w-full h-full rounded-full bg-[#1c1c1e] flex items-center justify-center overflow-hidden border-2 border-black">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#FFD700] to-[#E6C200] p-[2px] shadow-[0_0_15px_rgba(255,215,0,0.3)] shrink-0 select-none">
+            <div className="w-full h-full rounded-[10px] bg-[#1c1c1e] flex items-center justify-center overflow-hidden border border-black/50">
               <img src="https://i.suar.me/X9N3J/l" alt="PlushTap" className="w-full h-full object-cover" />
             </div>
           </div>
-          <div className="flex flex-col min-w-[80px]">
-            <h2 className="font-bold text-[13px] tracking-wide text-white truncate group-hover:text-[#00f3ff] transition-colors flex items-center gap-1.5">
-               {username || 'Player1'}
-               <span className="w-1.5 h-1.5 rounded-full bg-[#00f3ff] shadow-[0_0_8px_#00f3ff]"></span>
+          <div className="flex flex-col overflow-hidden">
+            <h2 className="font-bold text-[13px] sm:text-[14px] tracking-wide text-white truncate group-hover:text-[#00f3ff] transition-colors flex items-center gap-1.5">
+               <span className="truncate">{username || 'Player1'}</span>
+               <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-[#00f3ff] shadow-[0_0_8px_#00f3ff]"></span>
             </h2>
-            <div className="flex items-center gap-1 mt-0.5">
-               <span className="text-[10px] font-bold text-[#FFD700] uppercase tracking-wider">{currentLevel.name}</span>
-               <span className="text-[9px] font-bold text-white/40">Lvl {currentLevelIdx + 1}</span>
+            <div className="flex items-center gap-1 mt-0.5 shrink-0">
+               <span className="text-[10px] sm:text-[11px] font-bold text-[#FFD700] uppercase tracking-wider truncate">{currentLevel.name}</span>
+               <span className="text-[9px] sm:text-[10px] font-bold text-white/40 shrink-0 whitespace-nowrap">Lvl {currentLevelIdx + 1}</span>
             </div>
           </div>
         </button>

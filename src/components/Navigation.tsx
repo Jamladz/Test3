@@ -22,7 +22,7 @@ export function Navigation({ currentTab, setTab, isAdmin }: NavigationProps) {
   }
 
   return (
-    <div className="shrink-0 w-full glass-panel rounded-t-3xl pb-safe pt-2 px-6 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/10 bg-[#121212]/80 mt-auto">
+    <div className="shrink-0 w-full glass-panel rounded-t-3xl pb-safe pt-2 px-6 z-40 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/10 bg-[#121212]/80 mt-auto">
       <div className="flex justify-between items-center w-full max-w-md mx-auto mb-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
