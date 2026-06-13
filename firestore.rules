@@ -41,34 +41,14 @@ service cloud.firestore {
 
       // Update rules (Anti-Cheat logic)
       allow update: if (isOwner(userId) && isValidUser(incoming()) && (
-        // Action: standard sync (balance increases, energy decreases/regenerates)
-        (
-          incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'energy', 'lastLogin', 'offlineEarnings', 'friendsCount', 'adsWatched', 'referredBy', 'referralRewardClaimed', 'upgrades', 'missions', 'totalTapped', 'gifts', 'createdAt', 'tonBalance', 'tonMiningRate', 'lastTonSync', 'tonMiningActiveUntil', 'tonAdsWatchedDaily', 'lastTonAdReset', 'gramBalance', 'gramMiningRate', 'lastGramSync', 'gramMiningActiveUntil', 'withdrawals'])
-          && incoming().balance >= existing().balance
-        )
-        ||
-        // Action: buy upgrade (balance decreases, profitPerHour increases)
-        (
-          incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'profitPerHour', 'upgrades', 'tonBalance', 'tonMiningRate', 'lastTonSync', 'tonMiningActiveUntil', 'gramBalance', 'gramMiningRate', 'lastGramSync', 'gramMiningActiveUntil', 'withdrawals'])
-          && incoming().balance <= existing().balance
-        )
-        ||
-        // Action: Claim Task
-        (
-          incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'missions', 'tonBalance', 'gramBalance'])
-          && incoming().balance >= existing().balance
-        )
-        || 
-        // Action: Ads / Referrals
-        (
-          incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'adsWatched', 'friendsCount', 'tonBalance', 'tonMiningRate', 'tonMiningActiveUntil'])
-          && incoming().balance >= existing().balance
-        )
-        ||
-        // Action: Wallet / Withdrawing
-        (
-           incoming().diff(existing()).affectedKeys().hasOnly(['walletAddress', 'withdrawals', 'tonBalance'])
-        )
+        (incoming().role == existing().role || (!('role' in existing()) && incoming().role == 'user')) &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+            'balance', 'energy', 'lastLogin', 'offlineEarnings', 'friendsCount', 'adsWatched', 
+            'referredBy', 'referralRewardClaimed', 'upgrades', 'missions', 'totalTapped', 'gifts', 
+            'createdAt', 'tonBalance', 'tonMiningRate', 'lastTonSync', 'tonMiningActiveUntil', 
+            'tonAdsWatchedDaily', 'lastTonAdReset', 'gramBalance', 'gramMiningRate', 'lastGramSync', 
+            'gramMiningActiveUntil', 'withdrawals', 'hasClaimedPlushAirdrop', 'profitPerHour', 'walletAddress', 'role'
+        ])
       )) 
       || isAdmin();
     }
