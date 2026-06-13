@@ -11,7 +11,7 @@ import { TonModal } from '../components/TonModal';
 import { useTonConnectUI } from '@tonconnect/ui-react';
 
 export function Game() {
-  const { balance, energy, maxEnergy, tapMultiplier, addBalance, reduceEnergy, increaseEnergy, offlineEarnings, claimOfflineEarnings, requestWithdrawal, withdrawals } = useGameStore();
+  const { balance, energy, maxEnergy, tapMultiplier, addBalance, reduceEnergy, increaseEnergy, offlineEarnings, claimOfflineEarnings, requestWithdrawal, withdrawals, hasClaimedPlushAirdrop, claimPlushAirdrop } = useGameStore();
   const [tonConnectUI] = useTonConnectUI();
   const [isProcessingAirdrop, setIsProcessingAirdrop] = useState(false);
   const [taps, setTaps] = useState<{ id: number; x: number; y: number }[]>([]);
@@ -434,13 +434,39 @@ export function Game() {
                 <X size={20} />
               </button>
               
-              <div className="w-20 h-20 shrink-0 bg-gradient-to-tr from-[#00f3ff]/20 to-[#00f3ff]/5 rounded-[24px] flex items-center justify-center mb-5 border border-[#00f3ff]/30 shadow-[0_0_30px_rgba(0,243,255,0.15)] relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent"></div>
-                <Wallet size={36} className="text-[#00f3ff] drop-shadow-[0_0_10px_rgba(0,243,255,0.8)] relative z-10" />
-              </div>
-              
-              <h2 className="text-2xl font-black text-white mb-2 tracking-tight text-center">Airdrop Withdrawal</h2>
-              <p className="text-white/50 text-center text-xs sm:text-sm mb-6 px-2 sm:px-4 leading-relaxed">Convert your in-game coins to real PLUSH tokens. Enter your TON wallet address below to receive your airdrop.</p>
+              {!hasClaimedPlushAirdrop ? (
+                <div className="flex flex-col items-center w-full py-4">
+                  <div className="w-24 h-24 shrink-0 bg-gradient-to-tr from-[#00f3ff]/20 to-[#00f3ff]/5 rounded-[28px] flex items-center justify-center mb-6 border border-[#00f3ff]/30 shadow-[0_0_40px_rgba(0,243,255,0.2)] relative overflow-hidden group animate-[bounce_3s_infinite]">
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent"></div>
+                    <Wallet size={48} className="text-[#00f3ff] drop-shadow-[0_0_15px_rgba(0,243,255,0.8)] relative z-10" />
+                  </div>
+                  <h2 className="text-3xl font-black text-white mb-3 tracking-tight text-center">Welcome Airdrop!</h2>
+                  <p className="text-white/60 text-center text-sm md:text-base mb-8 px-2 sm:px-4 leading-relaxed font-medium">
+                    You have received a special welcome gift. Claim your first <strong className="text-[#00f3ff] font-bold text-lg drop-shadow-[0_0_8px_rgba(0,243,255,0.5)]">10 PLUSH</strong> tokens now and convert your in-game coins to real value.
+                  </p>
+                  <button
+                    onClick={async () => {
+                      setIsProcessingAirdrop(true);
+                      await claimPlushAirdrop();
+                      setIsProcessingAirdrop(false);
+                      const twa = (window as any).Telegram?.WebApp;
+                      if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
+                    }}
+                    disabled={isProcessingAirdrop}
+                    className="relative w-full h-[60px] bg-gradient-to-r from-[#00f3ff] to-[#0099ff] text-white font-black rounded-2xl shadow-[0_0_30px_rgba(0,243,255,0.4)] hover:brightness-110 active:scale-95 transition-all text-lg flex items-center justify-center gap-2 border border-white/20"
+                  >
+                    {isProcessingAirdrop ? <Loader2 size={28} className="animate-spin text-white" /> : "Claim 10 PLUSH"}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="w-20 h-20 shrink-0 bg-gradient-to-tr from-[#00f3ff]/20 to-[#00f3ff]/5 rounded-[24px] flex items-center justify-center mb-5 border border-[#00f3ff]/30 shadow-[0_0_30px_rgba(0,243,255,0.15)] relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent"></div>
+                    <Wallet size={36} className="text-[#00f3ff] drop-shadow-[0_0_10px_rgba(0,243,255,0.8)] relative z-10" />
+                  </div>
+                  
+                  <h2 className="text-2xl font-black text-white mb-2 tracking-tight text-center">Airdrop Withdrawal</h2>
+                  <p className="text-white/50 text-center text-xs sm:text-sm mb-6 px-2 sm:px-4 leading-relaxed">Convert your in-game coins to real PLUSH tokens. Enter your TON wallet address below to receive your airdrop.</p>
               
               <div className="flex flex-col items-center justify-center bg-[#1c1c1e]/80 border-2 border-white/5 shadow-lg rounded-[28px] w-full py-8 px-5 mb-5 relative overflow-hidden">
                  <div className="absolute -top-12 -right-12 w-40 h-40 bg-[#00f3ff]/20 blur-3xl rounded-full"></div>
@@ -569,6 +595,8 @@ export function Game() {
                       ))}
                     </div>
                  </div>
+              )}
+              </>
               )}
             </motion.div>
           </motion.div>
