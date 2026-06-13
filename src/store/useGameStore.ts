@@ -50,6 +50,8 @@ interface GameState {
   lastTonAdReset: number;
   withdrawals: any[];
   requestWithdrawal: (tokenAmount: number, coinCost: number, wallet: string) => Promise<void>;
+  hasClaimedPlushAirdrop: boolean;
+  claimPlushAirdrop: () => Promise<void>;
   useSpin: () => void;
   checkSpinReset: () => void;
   upgradeGramMining: (amount: number) => void;
@@ -98,6 +100,7 @@ export const useGameStore = create<GameState>()(
   tonAdsWatchedDaily: 0,
   lastTonAdReset: Date.now(),
   withdrawals: [],
+  hasClaimedPlushAirdrop: false,
   gifts: [],
 
   addGift: async (img: string) => {
@@ -224,6 +227,26 @@ export const useGameStore = create<GameState>()(
     }
   },
 
+  claimPlushAirdrop: async () => {
+    const state = get();
+    if (!state.firebaseUid || state.hasClaimedPlushAirdrop) return;
+    
+    // Give 10 PLUSH worth of coins (100,000,000)
+    const reward = 100000000;
+    const newBalance = state.balance + reward;
+    
+    set({
+      hasClaimedPlushAirdrop: true,
+      balance: newBalance,
+      syncedBalance: newBalance,
+    });
+    
+    await GameService.syncState(state.firebaseUid, {
+      balanceDelta: reward,
+      hasClaimedPlushAirdrop: true,
+    });
+  },
+
   useSpin: () => set((state) => ({ 
     spinsLeft: Math.max(0, state.spinsLeft - 1),
     totalSpins: state.totalSpins + 1 
@@ -301,6 +324,7 @@ export const useGameStore = create<GameState>()(
           lastGramSync: data.lastGramSync || get().lastGramSync || Date.now(),
           gramMiningActiveUntil: data.gramMiningActiveUntil || get().gramMiningActiveUntil || 0,
           withdrawals: data.withdrawals || [],
+          hasClaimedPlushAirdrop: data.hasClaimedPlushAirdrop || false,
           userId,
           username,
           justReferred: !!data._justReferred
@@ -363,6 +387,7 @@ export const useGameStore = create<GameState>()(
           gramMiningRate: state.gramMiningRate,
           lastGramSync: state.lastGramSync,
           gramMiningActiveUntil: state.gramMiningActiveUntil,
+          hasClaimedPlushAirdrop: state.hasClaimedPlushAirdrop,
       });
       
       if (result) {
