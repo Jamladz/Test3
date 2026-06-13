@@ -71,6 +71,7 @@ export const GameService = {
              missions: [],
              friendsCount: 0,
              adsWatched: 0,
+             hasClaimedPlushAirdrop: false,
              referredBy,
              referralRewardClaimed
           };
@@ -121,6 +122,8 @@ export const GameService = {
           if (deltas.gramMiningRate !== undefined) updates.gramMiningRate = deltas.gramMiningRate;
           if (deltas.lastGramSync !== undefined) updates.lastGramSync = deltas.lastGramSync;
           if (deltas.gramMiningActiveUntil !== undefined) updates.gramMiningActiveUntil = deltas.gramMiningActiveUntil;
+          
+          if (deltas.hasClaimedPlushAirdrop !== undefined) updates.hasClaimedPlushAirdrop = deltas.hasClaimedPlushAirdrop;
           
           console.log("SYNC UPDATES:", updates);
           console.log("DIFF KEYS:", Object.keys(updates));
