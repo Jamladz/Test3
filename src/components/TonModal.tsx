@@ -168,6 +168,14 @@ export function TonModal({ onClose }: TonModalProps) {
                   {isMiningActive ? "Mining Array Active" : "Mining Array Offline"}
                </p>
              </div>
+             
+             {!isMiningActive && tonMiningActiveUntil > 0 && (
+               <div className="flex items-center gap-1 mt-1 font-mono bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]">
+                 <span className="text-xs uppercase font-bold text-green-400">Yield Compiled:</span>
+                 <span className="text-sm font-black text-white tracking-widest">+{(tonMiningRate).toFixed(5)} TON</span>
+               </div>
+             )}
+             
              <div className="flex items-center gap-1 mt-1 text-white/50 bg-white/5 px-3 py-1 rounded-full border border-white/10">
                <Users size={14} className="text-[#00f3ff]" />
                <span className="text-xs font-mono">Active Miners: <span className="text-white font-bold">{activeMiners.toLocaleString()}</span></span>
