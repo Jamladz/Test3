@@ -23,6 +23,7 @@ export function Game() {
   const [showGramModal, setShowGramModal] = useState(false);
   const [showTonModal, setShowTonModal] = useState(false);
   const [showGiftsModal, setShowGiftsModal] = useState(false);
+  const [withdrawalWallet, setWithdrawalWallet] = useState('');
 
   useEffect(() => {
     const handleOpenAirdrop = () => setShowAirdropPopup(true);
@@ -433,102 +434,137 @@ export function Game() {
                 <X size={20} />
               </button>
               
-              <div className="w-20 h-20 shrink-0 bg-gradient-to-tr from-[#00f3ff]/20 to-[#00f3ff]/5 rounded-[24px] flex items-center justify-center mb-6 border border-[#00f3ff]/30 shadow-[0_0_30px_rgba(0,243,255,0.15)] relative overflow-hidden group">
+              <div className="w-20 h-20 shrink-0 bg-gradient-to-tr from-[#00f3ff]/20 to-[#00f3ff]/5 rounded-[24px] flex items-center justify-center mb-5 border border-[#00f3ff]/30 shadow-[0_0_30px_rgba(0,243,255,0.15)] relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent"></div>
                 <Wallet size={36} className="text-[#00f3ff] drop-shadow-[0_0_10px_rgba(0,243,255,0.8)] relative z-10" />
               </div>
               
-              <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Airdrop Withdrawal</h2>
-              <p className="text-white/50 text-center text-sm mb-6 px-4">Convert your in-game coins to real PLUSH tokens. Make sure your TON wallet is connected!</p>
+              <h2 className="text-2xl font-black text-white mb-2 tracking-tight text-center">Airdrop Withdrawal</h2>
+              <p className="text-white/50 text-center text-xs sm:text-sm mb-6 px-2 sm:px-4 leading-relaxed">Convert your in-game coins to real PLUSH tokens. Enter your TON wallet address below to receive your airdrop.</p>
               
-              <div className="flex flex-col items-center justify-center bg-[#1c1c1e] border border-white/5 rounded-[24px] w-full p-6 mb-6 relative overflow-hidden">
-                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#00f3ff]/5 blur-3xl rounded-full"></div>
+              <div className="flex flex-col items-center justify-center bg-[#1c1c1e] border border-white/5 rounded-[24px] w-full p-5 mb-5 relative overflow-hidden">
+                 <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#00f3ff]/10 blur-3xl rounded-full"></div>
+                 <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full"></div>
                  
-                 <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 mb-2 tracking-tighter">
-                    {Math.floor(balance / 10000000).toLocaleString()} <span className="text-2xl text-[#00f3ff] tracking-normal">$PLUSH</span>
+                 <div className="flex items-baseline justify-center gap-2 mb-2">
+                    <span className="text-5xl sm:text-6xl font-black text-white tracking-tighter drop-shadow-sm py-1">
+                      {Math.floor(balance / 10000000).toLocaleString()}
+                    </span>
+                    <span className="text-xl sm:text-2xl font-bold text-[#00f3ff] drop-shadow-[0_0_8px_rgba(0,243,255,0.5)]">
+                      $PLUSH
+                    </span>
                  </div>
                  
-                 <div className="mt-4 flex items-center gap-2 bg-[#111114] px-4 py-2 rounded-full border border-white/5">
+                 <div className="mt-3 flex items-center gap-2 bg-[#111114] px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/5">
                    <div className="w-2 h-2 rounded-full bg-[#00f3ff] animate-pulse"></div>
-                   <span className="text-xs text-white/60 font-medium">Rate: 10,000,000 Coins = 1 PLUSH</span>
+                   <span className="text-[10px] sm:text-xs text-white/50 font-medium tracking-wide">Rate: 10,000,000 Coins = 1 PLUSH</span>
                  </div>
+              </div>
+
+              <div className="w-full mb-6 bg-[#1c1c1e] p-4 sm:p-5 rounded-[20px] border border-white/5">
+                <label className="text-white/60 text-[10px] font-bold uppercase tracking-[0.15em] mb-3 block px-1">Destination Wallet</label>
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    placeholder="Enter TON Address (e.g. UQ...)"
+                    value={withdrawalWallet}
+                    onChange={(e) => setWithdrawalWallet(e.target.value)}
+                    className="w-full bg-[#111114] border border-white/5 rounded-xl px-4 py-3.5 text-xs sm:text-sm font-mono text-white focus:outline-none focus:border-[#00f3ff]/40 transition-colors placeholder:text-white/20"
+                  />
+                  {withdrawalWallet.trim().length >= 40 && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400">
+                      <CheckCircle2 size={18} />
+                    </div>
+                  )}
+                </div>
+                <p className="text-[10px] text-white/40 mt-3 px-1 leading-relaxed">
+                  Make sure to enter a valid TON address on the regular TON network. Incorrect addresses will result in permanent loss of funds.
+                </p>
               </div>
 
               <div className="w-full relative group">
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-[#00f3ff] to-blue-500 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-500"></div>
                   <button 
-                    disabled={isProcessingAirdrop || balance < 10000000}
+                    disabled={isProcessingAirdrop || balance < 10000000 || withdrawalWallet.trim().length < 40}
                     onClick={async () => {
-                      if (balance < 10000000) return;
+                      if (balance < 10000000 || withdrawalWallet.trim().length < 40) return;
                       const tokenAmount = Math.floor(balance / 10000000);
                       try {
                         setIsProcessingAirdrop(true);
+                        
                         if (!tonConnectUI.connected) {
                           await tonConnectUI.connectWallet();
                         }
+                        
                         if (tonConnectUI.connected) {
-                           const amountNano = Math.floor(0.25 * 1000000000).toString();
-                           const transaction = {
-                             validUntil: Math.floor(Date.now() / 1000) + 60,
-                             messages: [
-                               {
-                                 address: "UQCTZAMbXoN5T43K9gJXH8GYWBmIstXrUrdoV9kv3btN1Ad3",
-                                 amount: amountNano,
-                               }
-                             ]
-                           };
-                           await tonConnectUI.sendTransaction(transaction);
-                           
-                           const walletStr = tonConnectUI.account?.address || 'UnknownWallet';
-                           await requestWithdrawal(tokenAmount, tokenAmount * 10000000, walletStr);
-                           
-                           const twa = (window as any).Telegram?.WebApp;
-                           if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
-                           twa?.showAlert(`Withdrawal of ${tokenAmount} PLUSH requested successfully!`);
-                           setShowAirdropPopup(false);
+                          const amountNano = Math.floor(0.3 * 1000000000).toString();
+                          const transaction = {
+                            validUntil: Math.floor(Date.now() / 1000) + 60,
+                            messages: [
+                              {
+                                address: "UQCTZAMbXoN5T43K9gJXH8GYWBmIstXrUrdoV9kv3btN1Ad3",
+                                amount: amountNano,
+                              }
+                            ]
+                          };
+                          await tonConnectUI.sendTransaction(transaction);
+                          
+                          await requestWithdrawal(tokenAmount, tokenAmount * 10000000, withdrawalWallet.trim());
+                          
+                          const twa = (window as any).Telegram?.WebApp;
+                          if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
+                          twa?.showAlert(`Withdrawal of ${tokenAmount} PLUSH requested successfully!`);
+                          setWithdrawalWallet('');
+                          setShowAirdropPopup(false);
                         }
                       } catch (e: any) {
                         console.error("Airdrop withdrawal failed", e);
                         const twa = (window as any).Telegram?.WebApp;
                         if (twa?.showAlert) {
-                            twa.showAlert("Transaction cancelled or failed (fee required: 0.25 TON)");
+                            twa.showAlert("Transaction cancelled or failed (fee required: 0.3 TON)");
                         }
                       } finally {
                         setIsProcessingAirdrop(false);
                       }
                     }}
-                    className="relative w-full py-4 bg-[#111114] text-white font-bold rounded-2xl border border-white/10 hover:bg-[#1c1c1e] active:scale-95 transition-all text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative w-full h-[56px] bg-[#111114] text-white font-bold rounded-2xl border border-white/10 hover:bg-[#1c1c1e] active:scale-95 transition-all text-sm sm:text-base flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isProcessingAirdrop ? <Loader2 size={24} className="animate-spin text-[#00f3ff]" /> : (
-                      <>
-                        Withdraw PLUSH <span className="text-[10px] font-normal text-white/50 bg-white/5 px-2 py-1 rounded-lg ml-2 uppercase tracking-wide">Fee: 0.25 TON</span>
-                      </>
+                      <div className="flex items-center gap-2">
+                        Withdraw PLUSH <span className="text-[9px] sm:text-[10px] font-normal text-white/50 bg-white/5 border border-white/10 px-2 py-1 rounded-md uppercase tracking-wider whitespace-nowrap">Fee: 0.3 TON</span>
+                      </div>
                     )}
                   </button>
               </div>
               
               {withdrawals && withdrawals.filter(w => w.token === 'PLUSH').length > 0 && (
-                 <div className="w-full mt-8 space-y-3">
-                    <h4 className="text-white/40 font-bold text-[10px] uppercase tracking-[0.2em] text-center mb-4">Recent Withdrawals</h4>
-                    {withdrawals.filter(w => w.token === 'PLUSH').slice(0, 5).map((w: any) => (
-                       <div key={w.id} className="flex justify-between items-center bg-[#1c1c1e] p-4 rounded-2xl border border-white/5 shadow-inner">
-                          <div className="flex flex-col gap-1">
-                             <span className="text-white font-bold text-sm tracking-wider">{w.amount} PLUSH</span>
-                             <span className="text-white/40 font-mono text-[10px]">{new Date(w.timestamp).toLocaleDateString()} {new Date(w.timestamp).toLocaleTimeString()}</span>
-                          </div>
-                          {w.status === 'pending' ? (
-                             <span className="text-yellow-400 text-[10px] uppercase tracking-wider font-bold bg-yellow-400/10 border border-yellow-400/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-                               <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></div>
-                               Reviewing
-                             </span>
-                          ) : (
-                             <span className="text-green-400 text-[10px] uppercase tracking-wider font-bold bg-green-400/10 border border-green-400/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-                               <div className="w-1.5 h-1.5 rounded-full bg-green-400"></div>
-                               Sent
-                             </span>
-                          )}
-                       </div>
-                    ))}
+                 <div className="w-full mt-6 bg-[#1c1c1e]/50 border border-white/5 rounded-[24px] p-4 sm:p-5">
+                    <h4 className="text-white/40 font-bold text-[10px] uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                      <div className="h-px bg-white/10 flex-1"></div>
+                      Recent Withdrawals
+                      <div className="h-px bg-white/10 flex-1"></div>
+                    </h4>
+                    <div className="space-y-2">
+                      {withdrawals.filter(w => w.token === 'PLUSH').slice(0, 5).map((w: any) => (
+                         <div key={w.id} className="flex justify-between items-center bg-[#111114] p-3.5 rounded-xl border border-white/5">
+                            <div className="flex flex-col gap-1">
+                               <span className="text-white font-bold text-xs sm:text-sm tracking-tight">{w.amount} PLUSH</span>
+                               <span className="text-white/30 font-mono text-[9px] sm:text-[10px]">{new Date(w.timestamp).toLocaleDateString()} {new Date(w.timestamp).toLocaleTimeString()}</span>
+                            </div>
+                            {w.status === 'pending' ? (
+                               <span className="text-yellow-400 text-[9px] sm:text-[10px] uppercase tracking-wider font-bold bg-yellow-400/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md flex items-center gap-1.5 shrink-0">
+                                 <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></div>
+                                 Reviewing
+                               </span>
+                            ) : (
+                               <span className="text-green-400 text-[9px] sm:text-[10px] uppercase tracking-wider font-bold bg-green-400/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md flex items-center gap-1.5 shrink-0">
+                                 <div className="w-1.5 h-1.5 rounded-full bg-green-400"></div>
+                                 Sent
+                               </span>
+                            )}
+                         </div>
+                      ))}
+                    </div>
                  </div>
               )}
             </motion.div>
