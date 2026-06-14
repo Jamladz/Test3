@@ -54,6 +54,7 @@ interface GameState {
   claimPlushAirdrop: () => Promise<void>;
   useSpin: () => void;
   checkSpinReset: () => void;
+  migratedTo30Spins?: boolean;
   upgradeGramMining: (amount: number) => void;
   syncGramMining: () => void;
   startGramMining: () => void;
@@ -86,7 +87,7 @@ export const useGameStore = create<GameState>()(
   cooldowns: {},
   offlineEarnings: 0,
   justReferred: false,
-  spinsLeft: 3,
+  spinsLeft: 30,
   lastSpinReset: Date.now(),
   totalSpins: 0,
   gramBalance: 0,
@@ -263,7 +264,10 @@ export const useGameStore = create<GameState>()(
     const now = Date.now();
     const isNewDay = new Date(now).getUTCDate() !== new Date(state.lastSpinReset).getUTCDate();
     if (isNewDay) {
-      return { spinsLeft: 3, lastSpinReset: now };
+      return { spinsLeft: 30, lastSpinReset: now, migratedTo30Spins: true };
+    }
+    if (!state.migratedTo30Spins) {
+       return { spinsLeft: 30, migratedTo30Spins: true };
     }
     return {};
   }),
