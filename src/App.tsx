@@ -50,6 +50,7 @@ export default function App() {
       const interval = setInterval(() => {
         sync();
         useGameStore.getState().syncGramMining();
+        useGameStore.getState().syncTonMining();
       }, 10000);
       return () => clearInterval(interval);
     }
