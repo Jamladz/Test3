@@ -107,44 +107,7 @@ export function CaseOpeningSpinner({ onClose }: CaseOpeningSpinnerProps) {
     );
   };
 
-  const handleTonSpin = async () => {
-    if (spinning || isProcessing) return;
-    
-    try {
-      setIsProcessing(true);
-      if (!tonConnectUI.connected) {
-        await tonConnectUI.connectWallet();
-      }
-
-      if (tonConnectUI.connected) {
-        const transaction = {
-          validUntil: Math.floor(Date.now() / 1000) + 60, // 60 seconds
-          messages: [
-            {
-              address: "UQCTZAMbXoN5T43K9gJXH8GYWBmIstXrUrdoV9kv3btN1Ad3",
-              amount: "50000000", // 0.05 TON in nanoTON
-            }
-          ]
-        };
-
-        await tonConnectUI.sendTransaction(transaction);
-        executeSpin(true);
-      }
-    } catch (e: any) {
-      const msg = e?.message || String(e);
-      if (msg.toLowerCase().includes('reject') || msg.toLowerCase().includes('decline') || msg.toLowerCase().includes('not sent') || msg.toLowerCase().includes('cancel')) {
-        console.log("TON Transaction cancelled by user");
-        const twa = (window as any).Telegram?.WebApp;
-        if (twa?.showAlert) {
-            twa.showAlert("Transaction was cancelled.");
-        }
-      } else {
-        console.error("TON Transaction failed", e);
-      }
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  const handleTonSpin = async () => {};
 
   const executeSpin = (isTonSpin = false) => {
     setSpinning(true);
@@ -203,7 +166,7 @@ export function CaseOpeningSpinner({ onClose }: CaseOpeningSpinnerProps) {
         </button>
         
         <h2 className="text-2xl font-bold text-white mb-2 text-center mt-2">Case Opening</h2>
-        <p className="text-gray-400 text-sm mb-6 text-center">Spins left today: <span className="text-[#FFD700] font-bold">{spinsLeft}</span> / 3</p>
+        <p className="text-gray-400 text-sm mb-6 text-center">Spins left today: <span className="text-[#FFD700] font-bold">{spinsLeft}</span> / 30</p>
         
         <div className="relative w-[300px] h-32 mx-auto bg-black border border-white/10 rounded-xl overflow-hidden shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]">
           {/* Middle Pointer */}
@@ -278,18 +241,6 @@ export function CaseOpeningSpinner({ onClose }: CaseOpeningSpinnerProps) {
                   Spin & Watch Ad
                </div>
             )}
-          </button>
-          
-          <button 
-            onClick={handleTonSpin}
-            disabled={spinning || isProcessing}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-[#00f3ff]/20 to-[#00f3ff]/10 text-white font-bold border border-[#00f3ff]/30 hover:bg-[#00f3ff]/30 active:scale-95 transition-all shadow-[0_0_15px_rgba(0,243,255,0.2)] disabled:opacity-50 disabled:cursor-not-allowed flex flex-col items-center justify-center gap-1 min-h-[72px]"
-          >
-             <div className="flex items-center gap-2 text-lg">
-                <img src="https://i.suar.me/MpXLm/l" alt="TON" className="w-[18px] h-[18px]" />
-                Spin with TON
-             </div>
-             <span className="text-xs text-[#00f3ff]/80">Price: 0.05 TON</span>
           </button>
         </div>
       </motion.div>
