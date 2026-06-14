@@ -29,12 +29,23 @@ export function Admin() {
   const { username } = useGameStore();
   const [stats, setStats] = useState({ totalUsers: 0, totalEconomy: 0, bannedBots: 0, users: [] as any[] });
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'players' | 'withdrawals'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'players' | 'withdrawals' | 'goals'>('dashboard');
 
+  const { matches, fetchMatches } = useGameStore();
+  const [newMatch, setNewMatch] = useState({
+     teamA: { name: '', image: '' },
+     teamB: { name: '', image: '' },
+     matchDate: '',
+     status: 'upcoming'
+  });
+  const [editingScores, setEditingScores] = useState<{ [key: string]: { a: number, b: number } }>({});
+
+  
   const fetchStats = async () => {
     try {
       const data = await GameService.getAdminStats();
       setStats(data);
+      await fetchMatches();
     } catch(e) {
       console.error(e);
     } finally {
@@ -62,6 +73,41 @@ export function Admin() {
       await GameService.confirmWithdrawal(uid, withdrawalId);
       fetchStats();
     }
+  };
+
+  const handleAddMatch = async () => {
+    if (!newMatch.matchDate) return alert("Please select a date and time");
+    const d = new Date(newMatch.matchDate);
+    const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    const matchData = {
+      ...newMatch,
+      timestamp: d.getTime(),
+      day: d.getDate().toString(),
+      month: months[d.getMonth()],
+      matchTime: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    await GameService.addMatch(matchData);
+    setNewMatch({ teamA: { name: '', image: '' }, teamB: { name: '', image: '' }, matchDate: '', status: 'upcoming' });
+    fetchMatches();
+  };
+
+  const handleUpdateMatchScore = async (id: string) => {
+    const scores = editingScores[id];
+    if (!scores) return;
+    const data: any = { 
+       'teamA.score': scores.a, 
+       'teamB.score': scores.b 
+    };
+    await GameService.updateMatch(id, data);
+    alert('Scores updated!');
+    fetchMatches();
+  };
+
+  const handleUpdateMatchStatus = async (id: string, status: string, winner?: string) => {
+    const data: any = { status };
+    if (winner) data.winner = winner;
+    await GameService.updateMatch(id, data);
+    fetchMatches();
   };
 
   if (username !== 'sekanedr_is') {
@@ -134,6 +180,17 @@ export function Admin() {
             {pendingWithdrawalsCount > 0 && (
               <span className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full animate-pulse">{pendingWithdrawalsCount}</span>
             )}
+          </button>
+          <button
+            onClick={() => setActiveTab('goals')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+              activeTab === 'goals' 
+                ? 'bg-green-500/10 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.1)]' 
+                : 'text-gray-500 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Activity size={16} />
+            Goals
           </button>
         </div>
 
@@ -427,6 +484,101 @@ export function Admin() {
 
       </div>
 
+      {/* GOALS TAB */}
+      {activeTab === 'goals' && (
+        <div className="space-y-4 pb-8 px-4 sm:px-6">
+          <h2 className="font-bold text-sm tracking-widest text-gray-400 mb-2">MANAGE MATCHES & PREDICTIONS</h2>
+          
+          <div className="bg-[#151518] border border-white/5 bg-white/5 p-4 rounded-xl mb-6">
+            <h3 className="font-bold text-sm mb-4">Add New Match</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Team A Name</label>
+                  <input type="text" className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#00f3ff]" value={newMatch.teamA.name} onChange={e => setNewMatch({...newMatch, teamA: {...newMatch.teamA, name: e.target.value}})} />
+               </div>
+               <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Team A Image URL</label>
+                  <input type="text" className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#00f3ff]" value={newMatch.teamA.image} onChange={e => setNewMatch({...newMatch, teamA: {...newMatch.teamA, image: e.target.value}})} />
+               </div>
+               <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Team B Name</label>
+                  <input type="text" className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#00f3ff]" value={newMatch.teamB.name} onChange={e => setNewMatch({...newMatch, teamB: {...newMatch.teamB, name: e.target.value}})} />
+               </div>
+               <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Team B Image URL</label>
+                  <input type="text" className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#00f3ff]" value={newMatch.teamB.image} onChange={e => setNewMatch({...newMatch, teamB: {...newMatch.teamB, image: e.target.value}})} />
+               </div>
+               <div className="md:col-span-2">
+                  <label className="text-xs text-gray-500 mb-1 block">Match Date & Time</label>
+                  <input type="datetime-local" className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#00f3ff]" value={newMatch.matchDate} onChange={e => setNewMatch({...newMatch, matchDate: e.target.value})} />
+               </div>
+            </div>
+            <button
+               onClick={handleAddMatch}
+               className="mt-4 w-full bg-[#00f3ff] hover:bg-[#00f3ff]/90 text-black py-2 rounded font-bold transition-all active:scale-95"
+            >
+               Create Match
+            </button>
+          </div>
+
+          <div className="space-y-4">
+             {matches.map(m => (
+               <div key={m.id} className="bg-[#151518] border border-white/5 p-4 rounded-xl">
+                  <div className="flex justify-between items-center mb-3">
+                     <span className="text-xs bg-white/10 px-2 py-1 rounded">{m.day} {m.month} {m.matchTime}</span>
+                     <span className={`text-xs px-2 py-1 rounded uppercase font-bold focus:outline-none focus:border-[#00f3ff] ${m.status === 'live' ? 'bg-red-500/20 text-red-500' : m.status === 'upcoming' ? 'bg-green-500/20 text-green-500' : 'bg-gray-500/20 text-gray-400'}`}>
+                        {m.status}
+                     </span>
+                  </div>
+                  <div className="flex items-center justify-between mb-4">
+                     <div className="flex gap-2 items-center flex-1">
+                        <img src={m.teamA.image} alt={m.teamA.name} className="w-8 h-8 rounded-full bg-white/5" />
+                        <span className="font-bold text-sm truncate">{m.teamA.name}</span>
+                     </div>
+                     
+                     <div className="flex gap-2 items-center justify-center px-4">
+                        <input 
+                          type="number" 
+                          min="0"
+                          className="w-10 bg-black/40 border border-white/10 rounded py-1 text-center text-sm font-bold focus:outline-none focus:border-[#00f3ff]" 
+                          value={editingScores[m.id]?.a ?? m.teamA.score ?? 0}
+                          onChange={e => setEditingScores({...editingScores, [m.id]: { ...(editingScores[m.id] || {a:0, b:0}), a: parseInt(e.target.value) || 0 }})}
+                        />
+                        <span className="text-xs text-gray-500 font-bold">-</span>
+                        <input 
+                          type="number" 
+                          min="0"
+                          className="w-10 bg-black/40 border border-white/10 rounded py-1 text-center text-sm font-bold focus:outline-none focus:border-[#00f3ff]" 
+                          value={editingScores[m.id]?.b ?? m.teamB.score ?? 0}
+                          onChange={e => setEditingScores({...editingScores, [m.id]: { ...(editingScores[m.id] || {a:0, b:0}), b: parseInt(e.target.value) || 0 }})}
+                        />
+                     </div>
+
+                     <div className="flex gap-2 items-center flex-1 justify-end">
+                        <span className="font-bold text-sm truncate">{m.teamB.name}</span>
+                        <img src={m.teamB.image} alt={m.teamB.name} className="w-8 h-8 rounded-full bg-white/5" />
+                     </div>
+                  </div>
+                  
+                  <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-white/5">
+                     <button onClick={() => handleUpdateMatchScore(m.id)} className="w-full bg-green-500/20 text-green-400 hover:bg-green-500/30 text-xs py-2 rounded transition-all font-bold mb-2 border border-green-500/20">Save Scores</button>
+                     <div className="flex gap-2">
+                        <button onClick={() => handleUpdateMatchStatus(m.id, 'upcoming')} className="flex-1 bg-white/5 hover:bg-white/10 text-xs py-2 rounded transition-all">Set Upcoming</button>
+                        <button onClick={() => handleUpdateMatchStatus(m.id, 'live')} className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs py-2 rounded transition-all">Set LIVE</button>
+                     </div>
+                     <div className="grid grid-cols-3 gap-2 mt-2">
+                        <button onClick={() => handleUpdateMatchStatus(m.id, 'completed', 'A')} className="bg-[#00f3ff]/20 text-[#00f3ff] text-xs py-2 rounded">Winner: {m.teamA.name}</button>
+                        <button onClick={() => handleUpdateMatchStatus(m.id, 'completed', 'draw')} className="bg-yellow-500/20 text-yellow-500 text-xs py-2 rounded">Draw</button>
+                        <button onClick={() => handleUpdateMatchStatus(m.id, 'completed', 'B')} className="bg-[#00f3ff]/20 text-[#00f3ff] text-xs py-2 rounded">Winner: {m.teamB.name}</button>
+                     </div>
+                  </div>
+               </div>
+             ))}
+             {matches.length === 0 && <div className="text-center text-gray-500 py-4 text-sm mt-4">No matches added yet</div>}
+          </div>
+        </div>
+      )}
+
       <div className="p-3 border-t border-white/5 bg-[#111114] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500 font-mono z-20">
         <div className="flex items-center gap-2">
            <Globe size={14} className="text-[#00f3ff]" />
@@ -460,3 +612,4 @@ export function Admin() {
     </div>
   );
 }
+

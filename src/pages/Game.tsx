@@ -10,7 +10,11 @@ import { GiftsModal } from '../components/GiftsModal';
 import { TonModal } from '../components/TonModal';
 import { useTonConnectUI } from '@tonconnect/ui-react';
 
-export function Game() {
+interface GameProps {
+  onNavigate?: (tab: string) => void;
+}
+
+export function Game({ onNavigate }: GameProps) {
   const { balance, energy, maxEnergy, tapMultiplier, addBalance, reduceEnergy, increaseEnergy, offlineEarnings, claimOfflineEarnings, requestWithdrawal, withdrawals, hasClaimedPlushAirdrop, claimPlushAirdrop } = useGameStore();
   const [tonConnectUI] = useTonConnectUI();
   const [isProcessingAirdrop, setIsProcessingAirdrop] = useState(false);
@@ -146,6 +150,16 @@ export function Game() {
           className="w-12 h-12 rounded-2xl active:scale-95 transition-all relative overflow-hidden group shadow-[0_0_15px_rgba(0,243,255,0.3)] bg-transparent mt-2"
         >
           <img src="https://i.suar.me/9zy98/l" alt="TON Mining" className="w-full h-full object-contain" />
+        </button>
+        <button 
+          onClick={() => {
+            const twa = (window as any).Telegram?.WebApp;
+            if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
+            if (onNavigate) onNavigate('goal');
+          }}
+          className="w-12 h-12 rounded-2xl active:scale-95 transition-all relative overflow-hidden group shadow-[0_0_15px_rgba(255,170,0,0.3)] bg-transparent mt-2"
+        >
+          <img src="https://i.suar.me/5P8xM/l" alt="Goal" className="w-full h-full object-contain" />
         </button>
       </div>
 
