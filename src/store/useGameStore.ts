@@ -119,14 +119,18 @@ export const useGameStore = create<GameState>()(
     }
   },
 
-  startGramMining: () => set((state) => {
-    // 24 hours of mining
-    const duration = 24 * 60 * 60 * 1000;
-    return {
-      gramMiningActiveUntil: Date.now() + duration,
-      lastGramSync: Date.now()
-    };
-  }),
+  startGramMining: () => {
+    get().syncGramMining();
+    set((state) => {
+      // 24 hours of mining
+      const duration = 24 * 60 * 60 * 1000;
+      return {
+        gramMiningActiveUntil: Date.now() + duration,
+        lastGramSync: Date.now()
+      };
+    });
+    get().sync();
+  },
 
   upgradeGramMining: async (amount: number) => {
     const state = get();
@@ -164,13 +168,17 @@ export const useGameStore = create<GameState>()(
     return {};
   }),
 
-  startTonMining: () => set((state) => {
-    const duration = 24 * 60 * 60 * 1000;
-    return {
-      tonMiningActiveUntil: Date.now() + duration,
-      lastTonSync: Date.now()
-    };
-  }),
+  startTonMining: () => {
+    get().syncTonMining();
+    set((state) => {
+      const duration = 24 * 60 * 60 * 1000;
+      return {
+        tonMiningActiveUntil: Date.now() + duration,
+        lastTonSync: Date.now()
+      };
+    });
+    get().sync();
+  },
 
   buyTonPackage: (amount: number, multiplier: number) => set((state) => {
     // Deduct abstract balance (representing stars/TON via api hypothetically if real, but frontend only required)
@@ -434,6 +442,10 @@ export const useGameStore = create<GameState>()(
     const state = get();
     const now = Date.now();
     const secondsPassed = Math.floor((now - state.lastLogin) / 1000);
+
+    // Process mining offline gains before other things to stay in sync
+    get().syncTonMining();
+    get().syncGramMining();
     
     // Only calculate offline earnings if they've been away for at least 1 minute
     if (secondsPassed >= 60) {
