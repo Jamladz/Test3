@@ -128,9 +128,33 @@ export function TonModal({ onClose }: TonModalProps) {
           <ChevronLeft size={24} />
           <span className="font-bold text-lg tracking-wide uppercase">Exit</span>
         </button>
-        <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl shadow-inner">
-          <img src="https://i.suar.me/MpXLm/l" alt="TON" className="w-5 h-5 object-contain drop-shadow-[0_0_5px_rgba(0,243,255,0.6)]" />
-          <span className="font-bold text-white font-mono">{tonBalance.toFixed(4)} <span className="text-white/50 text-xs">TON</span></span>
+        
+        <div className="flex items-center gap-3">
+          {!isMiningActive && tonMiningActiveUntil > 0 && (
+             <motion.div 
+               initial={{ opacity: 0, scale: 0.8 }}
+               animate={{ opacity: 1, scale: 1 }}
+               className="hidden sm:flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg shadow-[0_0_15px_rgba(34,197,94,0.15)]"
+             >
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></div>
+                <span className="text-[10px] sm:text-xs font-black text-green-400 tracking-wider">+{tonMiningRate.toFixed(5)} TON</span>
+             </motion.div>
+          )}
+          <div className="flex flex-col items-end relative">
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl shadow-inner relative z-10">
+              <img src="https://i.suar.me/MpXLm/l" alt="TON" className="w-5 h-5 object-contain drop-shadow-[0_0_5px_rgba(0,243,255,0.6)]" />
+              <span className="font-bold text-white font-mono">{tonBalance.toFixed(4)} <span className="text-white/50 text-xs">TON</span></span>
+            </div>
+            {!isMiningActive && tonMiningActiveUntil > 0 && (
+               <motion.div 
+                 initial={{ opacity: 0, y: -5 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 className="absolute -bottom-5 right-2 sm:hidden text-[10px] sm:text-xs font-black text-green-400 tracking-normal drop-shadow-[0_0_5px_rgba(34,197,94,0.8)] whitespace-nowrap"
+               >
+                  +{tonMiningRate.toFixed(5)} Mined!
+               </motion.div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -168,13 +192,6 @@ export function TonModal({ onClose }: TonModalProps) {
                   {isMiningActive ? "Mining Array Active" : "Mining Array Offline"}
                </p>
              </div>
-             
-             {!isMiningActive && tonMiningActiveUntil > 0 && (
-               <div className="flex items-center gap-1 mt-1 font-mono bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]">
-                 <span className="text-xs uppercase font-bold text-green-400">Yield Compiled:</span>
-                 <span className="text-sm font-black text-white tracking-widest">+{(tonMiningRate).toFixed(5)} TON</span>
-               </div>
-             )}
              
              <div className="flex items-center gap-1 mt-1 text-white/50 bg-white/5 px-3 py-1 rounded-full border border-white/10">
                <Users size={14} className="text-[#00f3ff]" />
@@ -224,7 +241,7 @@ export function TonModal({ onClose }: TonModalProps) {
           <button 
              onClick={() => {
                startAdSequence(
-                 'int-30809',
+                 'int-35088',
                  () => {
                    startTonMining();
                  },
@@ -256,7 +273,7 @@ export function TonModal({ onClose }: TonModalProps) {
                  onClick={() => {
                    if (currentAdsWatched < 10 && !isUpgrading) {
                      startAdSequence(
-                       'int-30809',
+                       'int-35089',
                        () => {
                          setIsUpgrading(true);
                          setTimeout(() => {

@@ -6,7 +6,7 @@ import { useGameStore } from '../store/useGameStore';
 
 let activeSequenceCompleteCallback: (() => void) | null = null;
 let activeSequenceErrorCallback: (() => void) | null = null;
-let activeSequenceBlockId: string = 'int-30809';
+let activeSequenceBlockId: string = 'int-35086';
 
 // Global event target for ads
 export const adEvents = new EventTarget();
