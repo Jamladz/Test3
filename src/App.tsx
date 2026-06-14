@@ -8,6 +8,7 @@ import { Mine } from './pages/Mine';
 import { Friends } from './pages/Friends';
 import { Tasks } from './pages/Tasks';
 import { Admin } from './pages/Admin';
+import { Goal } from './pages/Goal';
 import { ReferralSuccessModal } from './components/ReferralSuccessModal';
 import { AdSequenceOverlay } from './components/AdSequenceOverlay';
 
@@ -118,11 +119,12 @@ export default function App() {
       <div className="flex-1 flex flex-col z-10 w-full relative min-h-0 pt-safe">
         <Header />
         
-        {currentTab === 'game' && <Game />}
+        {currentTab === 'game' && <Game onNavigate={setCurrentTab} />}
         {currentTab === 'mine' && <Mine />}
         {currentTab === 'tasks' && <Tasks />}
         {currentTab === 'friends' && <Friends />}
         {currentTab === 'admin' && role === 'admin' && <Admin />}
+        {currentTab === 'goal' && <Goal />}
 
         <Navigation currentTab={currentTab} setTab={setCurrentTab} isAdmin={role === 'admin'} />
       </div>
