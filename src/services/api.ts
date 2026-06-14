@@ -216,6 +216,102 @@ export const GameService = {
     }
   },
 
+  async getMatches() {
+    try {
+      const snap = await getDocs(collection(db, 'matches'));
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e) {
+      console.error(e);
+      return [];
+    }
+  },
+
+  async addMatch(data: any) {
+    try {
+      const ref = doc(collection(db, 'matches'));
+      await setDoc(ref, { 
+        ...data, 
+        createdAt: serverTimestamp() 
+      });
+      return ref.id;
+    } catch(e) {
+      console.error(e);
+    }
+  },
+
+  async updateMatch(id: string, data: any) {
+    try {
+      await updateDoc(doc(db, 'matches', id), data);
+    } catch(e) {
+      console.error(e);
+    }
+  },
+
+  async predictMatch(uid: string, matchId: string, choice: string, betAmount: number) {
+    try {
+       await runTransaction(db, async (t) => {
+         const matchRef = doc(db, 'matches', matchId);
+         const matchDoc = await t.get(matchRef);
+         if (!matchDoc.exists()) throw new Error("Match not found");
+         const matchData = matchDoc.data();
+         if (matchData.status === 'completed' || matchData.status === 'live') throw new Error("Match already closed for betting");
+         if (matchData.timestamp && Date.now() >= matchData.timestamp) throw new Error("Match has already started");
+
+         const userRef = doc(db, 'users', uid);
+         const userDoc = await t.get(userRef);
+         if (!userDoc.exists()) throw new Error("User not found");
+         const data = userDoc.data();
+         if ((data.balance || 0) < betAmount) throw new Error("Insufficient funds");
+         
+         const predictions = { ...(data.predictions || {}) };
+         if (predictions[matchId]) throw new Error("Already predicted");
+         
+         predictions[matchId] = {
+            choice,
+            collected: false,
+            betAmount
+         };
+
+         t.update(userRef, {
+            balance: data.balance - betAmount,
+            predictions
+         });
+       });
+       return true;
+    } catch(e) {
+      console.error(e);
+      return false;
+    }
+  },
+
+  async collectMatchReward(uid: string, matchId: string, rewardAmount: number) {
+    try {
+       await runTransaction(db, async (t) => {
+         const userRef = doc(db, 'users', uid);
+         const userDoc = await t.get(userRef);
+         if (!userDoc.exists()) throw new Error("User not found");
+         const data = userDoc.data();
+         
+         const predictions = { ...(data.predictions || {}) };
+         if (!predictions[matchId] || predictions[matchId].collected) throw new Error("Already collected or not predicted");
+
+         predictions[matchId] = {
+            ...predictions[matchId],
+            collected: true
+         };
+
+         t.update(userRef, {
+            balance: (data.balance || 0) + rewardAmount,
+            predictions
+         });
+       });
+       return true;
+    } catch(e) {
+      console.error(e);
+      return false;
+    }
+  },
+
   async updateWallet(uid: string, address: string) {
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, { walletAddress: address });
