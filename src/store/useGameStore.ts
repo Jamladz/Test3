@@ -64,6 +64,13 @@ interface GameState {
   buyTonPackage: (amount: number, multiplier: number) => void;
   gifts: string[];
   addGift: (img: string) => Promise<void>;
+  
+  // Goals / Matches
+  predictions: Record<string, { choice: string, collected: boolean, betAmount: number }>;
+  matches: any[];
+  fetchMatches: () => Promise<void>;
+  predictMatch: (matchId: string, choice: string, betAmount: number) => Promise<boolean>;
+  collectMatchReward: (matchId: string, rewardAmount: number) => Promise<boolean>;
 }
 
 export const useGameStore = create<GameState>()(
@@ -103,6 +110,50 @@ export const useGameStore = create<GameState>()(
   withdrawals: [],
   hasClaimedPlushAirdrop: false,
   gifts: [],
+  predictions: {},
+  matches: [],
+
+  fetchMatches: async () => {
+    const matches = await GameService.getMatches();
+    set({ matches });
+  },
+
+  predictMatch: async (matchId: string, choice: string, betAmount: number) => {
+    const state = get();
+    if (!state.firebaseUid) return false;
+    const success = await GameService.predictMatch(state.firebaseUid, matchId, choice, betAmount);
+    if (success) {
+      set(s => ({
+        balance: s.balance - betAmount,
+        syncedBalance: Math.max(0, s.syncedBalance - betAmount),
+        predictions: {
+          ...s.predictions,
+          [matchId]: { choice, collected: false, betAmount }
+        }
+      }));
+      return true;
+    }
+    return false;
+  },
+
+  collectMatchReward: async (matchId: string, rewardAmount: number) => {
+    const state = get();
+    if (!state.firebaseUid) return false;
+    const success = await GameService.collectMatchReward(state.firebaseUid, matchId, rewardAmount);
+    if (success) {
+      set(s => {
+         const newPredictions = {...s.predictions};
+         if (newPredictions[matchId]) newPredictions[matchId].collected = true;
+         return {
+           balance: s.balance + rewardAmount,
+           syncedBalance: s.syncedBalance + rewardAmount,
+           predictions: newPredictions
+         };
+      });
+      return true;
+    }
+    return false;
+  },
 
   addGift: async (img: string) => {
     const state = get();
@@ -337,10 +388,12 @@ export const useGameStore = create<GameState>()(
           gramMiningActiveUntil: data.gramMiningActiveUntil || get().gramMiningActiveUntil || 0,
           withdrawals: data.withdrawals || [],
           hasClaimedPlushAirdrop: data.hasClaimedPlushAirdrop || false,
+          predictions: data.predictions || {},
           userId,
           username,
           justReferred: !!data._justReferred
         });
+        get().fetchMatches();
         get().updateFromOffline();
       }
     } catch(e) {
