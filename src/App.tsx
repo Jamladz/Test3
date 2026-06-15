@@ -124,7 +124,7 @@ export default function App() {
         {currentTab === 'tasks' && <Tasks />}
         {currentTab === 'friends' && <Friends />}
         {currentTab === 'admin' && role === 'admin' && <Admin />}
-        {currentTab === 'goal' && <Goal />}
+        {currentTab === 'goal' && <Goal onClose={() => setCurrentTab('game')} />}
 
         <Navigation currentTab={currentTab} setTab={setCurrentTab} isAdmin={role === 'admin'} />
       </div>
