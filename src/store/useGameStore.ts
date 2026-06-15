@@ -209,7 +209,7 @@ export const useGameStore = create<GameState>()(
     const now = Date.now();
     // Only mine up to the end of the active mining session
     const effectiveNow = Math.min(now, state.gramMiningActiveUntil);
-    const diffDays = (effectiveNow - Math.min(state.lastGramSync, state.gramMiningActiveUntil)) / (1000 * 60 * 60 * 24);
+    const diffDays = Math.max(0, (effectiveNow - state.lastGramSync) / (1000 * 60 * 60 * 24));
     
     if (diffDays > 0) {
       return {
@@ -260,7 +260,7 @@ export const useGameStore = create<GameState>()(
   syncTonMining: () => set((state) => {
     const now = Date.now();
     const effectiveNow = Math.min(now, state.tonMiningActiveUntil);
-    const diffDays = (effectiveNow - Math.min(state.lastTonSync, state.tonMiningActiveUntil)) / (1000 * 60 * 60 * 24);
+    const diffDays = Math.max(0, (effectiveNow - state.lastTonSync) / (1000 * 60 * 60 * 24));
     
     if (diffDays > 0) {
       return {
@@ -426,6 +426,7 @@ export const useGameStore = create<GameState>()(
       });
       set(state => ({
          balance: state.balance + reward,
+         syncedBalance: state.syncedBalance + reward,
          missions: [...state.missions, missionId]
       }));
     } catch(e) {
@@ -436,23 +437,30 @@ export const useGameStore = create<GameState>()(
   sync: async () => {
     const state = get();
     if (!state.firebaseUid) return;
+    
+    // Always calculate最新 mining yields before saving to DB
+    get().syncTonMining();
+    get().syncGramMining();
+    
+    const latestState = get();
+    
     try {
-      const balanceDelta = Math.max(0, state.balance - state.syncedBalance);
+      const balanceDelta = Math.max(0, latestState.balance - latestState.syncedBalance);
       
-      const result = await GameService.syncState(state.firebaseUid, {
+      const result = await GameService.syncState(latestState.firebaseUid, {
           balanceDelta,
-          energy: state.energy,
+          energy: latestState.energy,
           lastLogin: Date.now(),
-          adsWatched: state.adsWatched,
-          tonBalance: state.tonBalance,
-          tonMiningRate: state.tonMiningRate,
-          lastTonSync: state.lastTonSync,
-          tonMiningActiveUntil: state.tonMiningActiveUntil,
-          gramBalance: state.gramBalance,
-          gramMiningRate: state.gramMiningRate,
-          lastGramSync: state.lastGramSync,
-          gramMiningActiveUntil: state.gramMiningActiveUntil,
-          hasClaimedPlushAirdrop: state.hasClaimedPlushAirdrop,
+          adsWatched: latestState.adsWatched,
+          tonBalance: latestState.tonBalance,
+          tonMiningRate: latestState.tonMiningRate,
+          lastTonSync: latestState.lastTonSync,
+          tonMiningActiveUntil: latestState.tonMiningActiveUntil,
+          gramBalance: latestState.gramBalance,
+          gramMiningRate: latestState.gramMiningRate,
+          lastGramSync: latestState.lastGramSync,
+          gramMiningActiveUntil: latestState.gramMiningActiveUntil,
+          hasClaimedPlushAirdrop: latestState.hasClaimedPlushAirdrop,
       });
       
       if (result) {
