@@ -124,7 +124,7 @@ export function Admin() {
   const pendingWithdrawalsCount = withdrawals.filter(w => w.status === 'pending').length;
 
   return (
-    <div className="flex flex-col w-full h-full bg-[#0a0a0c] text-white overflow-hidden relative">
+    <div className="flex flex-col flex-1 w-full h-full bg-[#0a0a0c] text-white overflow-hidden relative">
       {/* Top Navigation / Header */}
       <div className="flex-none px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[#111114] border-b border-white/5 z-20 relative gap-4 sm:gap-0">
         <div className="flex items-center justify-between w-full sm:w-auto">
@@ -200,7 +200,7 @@ export function Admin() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto w-full p-4 sm:p-6 no-scrollbar custom-scroll relative z-10">
+      <div className="flex-1 overflow-y-auto w-full p-4 sm:p-6 pb-28 no-scrollbar custom-scroll relative z-10">
         
         {/* DASHBOARD TAB */}
         {activeTab === 'dashboard' && (
@@ -482,10 +482,8 @@ export function Admin() {
           </div>
         )}
 
-      </div>
-
-      {/* GOALS TAB */}
-      {activeTab === 'goals' && (
+        {/* GOALS TAB */}
+        {activeTab === 'goals' && (
         <div className="space-y-4 pb-8 px-4 sm:px-6">
           <h2 className="font-bold text-sm tracking-widest text-gray-400 mb-2">MANAGE MATCHES & PREDICTIONS</h2>
           
@@ -578,6 +576,7 @@ export function Admin() {
           </div>
         </div>
       )}
+      </div>
 
       <div className="p-3 border-t border-white/5 bg-[#111114] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500 font-mono z-20">
         <div className="flex items-center gap-2">
