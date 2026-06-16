@@ -160,7 +160,9 @@ export const GameService = {
     const usersSnap = await getDocs(collection(db, 'users'));
     let totalEconomy = 0;
     let bannedBots = 0;
+    let onlineUsers = 0;
     const usersList: any[] = [];
+    const now = Date.now();
     usersSnap.forEach(doc => {
        const u = doc.data();
        const fName = String(u.firstName || '').toLowerCase();
@@ -173,11 +175,14 @@ export const GameService = {
        
        totalEconomy += (u.balance || 0);
        if (u.role === 'banned') bannedBots++;
+       if (u.lastLogin && (now - u.lastLogin) < 5 * 60 * 1000) {
+         onlineUsers++;
+       }
        usersList.push({ ...u, uid: doc.id });
     });
     // Sort users by balance descended
     usersList.sort((a,b) => (b.balance || 0) - (a.balance || 0));
-    return { totalUsers: usersList.length, totalEconomy, bannedBots, users: usersList };
+    return { totalUsers: usersList.length, totalEconomy, bannedBots, onlineUsers, users: usersList };
   },
 
   async requestWithdrawal(uid: string, tokenAmount: number, coinCost: number, wallet: string) {
