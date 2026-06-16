@@ -103,8 +103,13 @@ export function TonModal({ onClose }: TonModalProps) {
       console.error("TON purchase failed", e);
       const twa = (window as any).Telegram?.WebApp;
       const msg = e?.message || String(e);
-      if (twa?.showAlert && (msg.toLowerCase().includes('reject') || msg.toLowerCase().includes('decline'))) {
-          twa.showAlert("Transaction was cancelled.");
+      if (msg.toLowerCase().includes('reject') || msg.toLowerCase().includes('decline')) {
+          try {
+            if (twa?.showAlert) twa.showAlert("Transaction was cancelled.");
+            else alert("Transaction was cancelled.");
+          } catch (err) {
+            alert("Transaction was cancelled.");
+          }
       }
     } finally {
       setIsUpgrading(false);
