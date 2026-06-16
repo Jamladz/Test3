@@ -23,100 +23,42 @@ export const AuthService = {
 };
 
 export const GameService = {
-  async processReferral(telegramId: string, referrerId: string, authUid: string, username: string, firstName: string) {
-    if (telegramId === referrerId) return false;
-    
-    try {
-      await runTransaction(db, async (t) => {
-         const userRef = doc(db, 'users', telegramId);
-         const referrerRef = doc(db, 'users', referrerId);
-         const referralRef = doc(db, 'referrals', `${referrerId}_${telegramId}`);
-
-         const [userSnap, referrerSnap, referralSnap] = await Promise.all([
-           t.get(userRef),
-           t.get(referrerRef),
-           t.get(referralRef)
-         ]);
-
-         if (!referrerSnap.exists()) {
-            throw new Error('Referrer does not exist');
-         }
-
-         if (referralSnap.exists()) {
-            throw new Error('Referral already processed');
-         }
-
-         // Grant rewards to referrer
-         t.update(referrerRef, {
-            balance: increment(1000000),
-            friendsCount: increment(1)
-         });
-
-         // Record the referral
-         t.set(referralRef, {
-            referrerId,
-            referredId: telegramId.toString(),
-            username: username || '',
-            firstName: firstName || '',
-            createdAt: Date.now()
-         });
-
-         // If the user already exists, give them bonus
-         if (userSnap.exists()) {
-            const userData = userSnap.data() || {};
-            if (!userData.referralRewardClaimed) {
-               t.update(userRef, {
-                  balance: increment(1000000),
-                  referredBy: referrerId,
-                  referralRewardClaimed: true,
-                  authUid: authUid || userData.authUid || null
-               });
-            }
-         } else {
-            // Re-create user with bonus if they don't exist yet
-            t.set(userRef, {
-               id: telegramId.toString(),
-               authUid: authUid || null,
-               username: username || '',
-               firstName: firstName || 'Anonymous',
-               balance: 1000000 + 10000, // Bonus + initial
-               createdAt: Date.now(),
-               withdrawals: [],
-               tonBalance: 0.5,
-               energy: 1500,
-               maxEnergy: 1500,
-               profitPerHour: 0,
-               lastLogin: Date.now(),
-               role: username === 'sekanedr_is' ? 'admin' : 'user',
-               upgrades: {},
-               missions: [],
-               friendsCount: 0,
-               adsWatched: 0,
-               hasClaimedPlushAirdrop: false,
-               referredBy: referrerId,
-               referralRewardClaimed: true
-            });
-         }
-      });
-      return true;
-    } catch (error) {
-      console.error(`Client Referral Transaction failed:`, error);
-      return false;
-    }
-  },
-
-  async fetchOrCreateUser(telegramId: string, authUid: string, username: string, firstName: string, startParam?: string) {
-    const userRef = doc(db, 'users', telegramId);
+  async fetchOrCreateUser(uid: string, telegramId: string, username: string, firstName: string, startParam?: string, isVerifiedReferral: boolean = false) {
+    const userRef = doc(db, 'users', uid);
     
     try {
       const snap = await getDoc(userRef);
       if (!snap.exists()) {
+          // If we had a valid startParam and are verified, process the friend reward!
+          let referredBy = null;
+          let initialBalance = 10000;
+          let referralRewardClaimed = false;
+
+          if (isVerifiedReferral && startParam && startParam.startsWith('ref')) {
+             const referrerId = startParam.replace('ref', '');
+             // Find the referring user by telegram ID
+             const q = query(collection(db, 'users'), where('id', '==', referrerId));
+             const referrerSnap = await getDocs(q);
+             
+             if (!referrerSnap.empty) {
+                const referrerDoc = referrerSnap.docs[0];
+                referredBy = referrerId;
+                referralRewardClaimed = true;
+                // Grant reward to friend (e.g., 1000000 coins + 1 friend count)
+                await updateDoc(referrerDoc.ref, {
+                   balance: increment(1000000),
+                   friendsCount: increment(1)
+                });
+                // Grant bonus to new user
+                initialBalance += 1000000;
+             }
+          }
+
           const initialData: any = {
              id: telegramId.toString(),
-             authUid: authUid,
              username: username || '',
              firstName: firstName || 'Anonymous',
-             balance: 10000,
+             balance: initialBalance,
              createdAt: Date.now(),
              withdrawals: [],
              tonBalance: 0.5,
@@ -130,11 +72,11 @@ export const GameService = {
              friendsCount: 0,
              adsWatched: 0,
              hasClaimedPlushAirdrop: false,
-             referredBy: null,
-             referralRewardClaimed: false
+             referredBy,
+             referralRewardClaimed
           };
           await setRef(userRef, initialData);
-          return { ...initialData, _justReferred: false };
+          return { ...initialData, _justReferred: referralRewardClaimed };
       }
       return snap.data();
     } catch (e) {
