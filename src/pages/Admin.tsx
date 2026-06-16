@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { formatNumber, formatCurrency } from '../lib/utils';
-import { Users, Coins, Activity, ShieldAlert, BarChart3, TrendingUp, Settings2, Zap, ArrowUpRight, Flame, Globe, CreditCard, LayoutDashboard } from 'lucide-react';
+import { Users, Coins, Activity, ShieldAlert, BarChart3, TrendingUp, Settings2, Zap, ArrowUpRight, Flame, Globe, CreditCard, LayoutDashboard, Megaphone } from 'lucide-react';
 import { GameService } from '../services/api';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
@@ -29,7 +29,7 @@ export function Admin() {
   const { username } = useGameStore();
   const [stats, setStats] = useState({ totalUsers: 0, totalEconomy: 0, bannedBots: 0, onlineUsers: 0, users: [] as any[] });
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'players' | 'withdrawals' | 'goals'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'players' | 'withdrawals' | 'goals' | 'broadcast'>('dashboard');
 
   const { matches, fetchMatches } = useGameStore();
   const [newMatch, setNewMatch] = useState({
@@ -39,6 +39,14 @@ export function Admin() {
      status: 'upcoming'
   });
   const [editingScores, setEditingScores] = useState<{ [key: string]: { a: number, b: number } }>({});
+  
+  const [broadcastData, setBroadcastData] = useState({
+     photoUrl: 'https://i.suar.me/OpwP6/l',
+     caption: 'Withdraw your $PLUSH coins before the first season ends and the coin gets listed!',
+     appUrl: 'https://tonew.sekanedrmessaif.workers.dev/'
+  });
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [broadcastResult, setBroadcastResult] = useState<{sent: number, failed: number} | null>(null);
 
   
   const fetchStats = async () => {
@@ -108,6 +116,38 @@ export function Admin() {
     if (winner) data.winner = winner;
     await GameService.updateMatch(id, data);
     fetchMatches();
+  };
+
+  const handleBroadcast = async () => {
+    if (!confirm(`Are you sure you want to broadcast this message to all ${stats.totalUsers} users?`)) return;
+    
+    setIsBroadcasting(true);
+    setBroadcastResult(null);
+    try {
+       // Filter out bots/test users if needed, or send to all valid telegram IDs
+       const userIds = stats.users.filter(u => u.id && u.role !== 'banned').map(u => u.id);
+       
+       const response = await fetch('/api/broadcast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+             userIds,
+             ...broadcastData
+          })
+       });
+       
+       const result = await response.json();
+       if (response.ok) {
+          setBroadcastResult({ sent: result.sent, failed: result.failed });
+       } else {
+          alert('Broadcast failed: ' + result.error);
+       }
+    } catch (e) {
+       console.error("Broadcast failed", e);
+       alert("An error occurred while broadcasting");
+    } finally {
+       setIsBroadcasting(false);
+    }
   };
 
   if (username !== 'sekanedr_is') {
@@ -191,6 +231,17 @@ export function Admin() {
           >
             <Activity size={16} />
             Goals
+          </button>
+          <button
+            onClick={() => setActiveTab('broadcast')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+              activeTab === 'broadcast' 
+                ? 'bg-[#ff00ff]/10 text-[#ff00ff] shadow-[0_0_10px_rgba(255,0,255,0.1)]' 
+                : 'text-gray-500 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Megaphone size={16} />
+            Broadcast
           </button>
         </div>
 
@@ -576,6 +627,78 @@ export function Admin() {
           </div>
         </div>
       )}
+
+        {/* BROADCAST TAB */}
+        {activeTab === 'broadcast' && (
+          <div className="space-y-4 pb-8 px-4 sm:px-6">
+            <h2 className="font-bold text-sm tracking-widest text-gray-400 mb-2 flex items-center gap-2"><Megaphone size={16} /> BROADCAST TO ALL PLAYERS</h2>
+            <div className="bg-[#151518] border border-[#ff00ff]/20 p-6 rounded-2xl relative">
+               <p className="text-gray-400 text-sm mb-6 max-w-lg">Send a direct message via the Telegram Bot to all your registered users. You can set this up to be triggered manually every 24 hours.</p>
+
+               <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-gray-500 uppercase tracking-wider mb-1 block">Image URL</label>
+                    <input 
+                       type="text" 
+                       className="w-full bg-black/40 border border-[#ff00ff]/30 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#ff00ff]" 
+                       value={broadcastData.photoUrl} 
+                       onChange={e => setBroadcastData({...broadcastData, photoUrl: e.target.value})} 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 uppercase tracking-wider mb-1 block">Message Description (English)</label>
+                    <textarea 
+                       className="w-full bg-black/40 border border-[#ff00ff]/30 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#ff00ff] min-h-[100px]" 
+                       value={broadcastData.caption} 
+                       onChange={e => setBroadcastData({...broadcastData, caption: e.target.value})} 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 uppercase tracking-wider mb-1 block">Open Web App URL (Button)</label>
+                    <input 
+                       type="text" 
+                       className="w-full bg-black/40 border border-[#ff00ff]/30 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#ff00ff]" 
+                       value={broadcastData.appUrl} 
+                       onChange={e => setBroadcastData({...broadcastData, appUrl: e.target.value})} 
+                    />
+                  </div>
+
+                  <div className="pt-4 border-t border-white/5 mt-6">
+                     <button
+                        onClick={handleBroadcast}
+                        disabled={isBroadcasting}
+                        className="w-full bg-gradient-to-r from-[#ff00ff]/80 to-[#aa00ff]/80 hover:from-[#ff00ff] hover:to-[#aa00ff] text-white py-4 rounded-xl font-bold uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 flex justify-center items-center gap-2 shadow-[0_0_20px_rgba(255,0,255,0.2)]"
+                     >
+                        {isBroadcasting ? (
+                           <>
+                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              Broadcasting to {stats.totalUsers} users...
+                           </>
+                        ) : (
+                           <>
+                              <Megaphone size={18} />
+                              Send Notification Now (All Users)
+                           </>
+                        )}
+                     </button>
+                  </div>
+
+                  {broadcastResult && (
+                     <div className="mt-4 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-center">
+                        <p className="text-green-400 font-bold mb-1">Broadcast Complete!</p>
+                        <p className="text-sm text-gray-300">Successfully sent to <span className="font-bold text-white">{broadcastResult.sent}</span> users.</p>
+                        {broadcastResult.failed > 0 && <p className="text-xs text-red-400 mt-1">Failed to send to {broadcastResult.failed} users (blocked bot or error).</p>}
+                     </div>
+                  )}
+               </div>
+            </div>
+            
+            <div className="mt-4 p-4 border border-white/5 bg-white/5 inline-flex flex-col rounded-xl text-sm text-gray-400">
+               <span className="font-bold text-white mb-2 tracking-wide text-xs">ℹ️ AUTOMATION TIP (Every 24h)</span>
+               To fully automate this every 24 hours without opening the dashboard, a timed cron trigger needs to hit the backend <code className="bg-black/50 text-[#00f3ff] px-1 rounded mx-1">/api/broadcast</code> endpoint. For now, you can trigger it right here with 1 click!
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="p-3 border-t border-white/5 bg-[#111114] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500 font-mono z-20">
@@ -611,4 +734,3 @@ export function Admin() {
     </div>
   );
 }
-
