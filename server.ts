@@ -41,6 +41,54 @@ async function startServer() {
     }
   }
 
+  app.post('/api/broadcast', async (req, res) => {
+    const { userIds, photoUrl, caption, appUrl } = req.body;
+    
+    // In production, you would verify an admin token here.
+    // For this demo, we assume the admin frontend securely posts this.
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ error: "No user IDs provided" });
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    // We process sequentially to avoid rate-limiting from Telegram API (30 msgs/sec limit mostly)
+    for (const userId of userIds) {
+      try {
+        const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: userId,
+            photo: photoUrl,
+            caption: caption,
+            reply_markup: {
+              inline_keyboard: [[{ text: "Open Web App", web_app: { url: appUrl } }]]
+            }
+          })
+        });
+        
+        if (response.ok) {
+          successCount++;
+        } else {
+          const errText = await response.text();
+          console.error(`Failed to send to ${userId}:`, errText);
+          failCount++;
+        }
+        
+        // Sleep 40ms to avoid hitting limits (approx. ~25 msgs/sec)
+        await new Promise(r => setTimeout(r, 40));
+      } catch (err) {
+        console.error(`Error broadcasting to ${userId}:`, err);
+        failCount++;
+      }
+    }
+
+    return res.status(200).json({ success: true, sent: successCount, failed: failCount });
+  });
+
   // API endpoint for frontend to call for secure backend referral handling
   app.post('/api/referral', async (req, res) => {
     const { initData, startParam, uid, username, firstName, telegramId } = req.body;
