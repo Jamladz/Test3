@@ -556,23 +556,15 @@ export function Game({ onNavigate }: GameProps) {
                           
                           const twa = (window as any).Telegram?.WebApp;
                           if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
-                          try {
-                            if (twa?.showAlert) twa.showAlert(`Withdrawal of ${tokenAmount} PLUSH requested successfully!`);
-                            else alert(`Withdrawal of ${tokenAmount} PLUSH requested successfully!`);
-                          } catch (e) {
-                            alert(`Withdrawal of ${tokenAmount} PLUSH requested successfully!`);
-                          }
+                          twa?.showAlert(`Withdrawal of ${tokenAmount} PLUSH requested successfully!`);
                           setWithdrawalWallet('');
                           setShowAirdropPopup(false);
                         }
                       } catch (e: any) {
                         console.error("Airdrop withdrawal failed", e);
                         const twa = (window as any).Telegram?.WebApp;
-                        try {
-                          if (twa?.showAlert) twa.showAlert("Transaction cancelled or failed (fee required: 0.3 TON)");
-                          else alert("Transaction cancelled or failed (fee required: 0.3 TON)");
-                        } catch (err) {
-                          alert("Transaction cancelled or failed (fee required: 0.3 TON)");
+                        if (twa?.showAlert) {
+                            twa.showAlert("Transaction cancelled or failed (fee required: 0.3 TON)");
                         }
                       } finally {
                         setIsProcessingAirdrop(false);
