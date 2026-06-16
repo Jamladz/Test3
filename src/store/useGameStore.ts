@@ -331,36 +331,37 @@ export const useGameStore = create<GameState>()(
   fetchUser: async (userId: string, username: string, firstName: string, startParam?: string, initData?: string) => {
     try {
       const fbUid = await AuthService.loginAnonymous(userId);
-      set({ firebaseUid: fbUid, userId });
+      // We set firebaseUid to userId so that all GameService calls use the Telegram ID as the document ID!
+      set({ firebaseUid: userId.toString(), userId });
 
       let isVerifiedReferral = false;
-      const API_URL = import.meta.env.VITE_API_URL || '';
 
-      // Perform server-side validation check of Telegram Data before allowing referral
+      // Perform client-side validation check of Telegram Data before allowing referral
       if (startParam && startParam.startsWith('ref_')) {
           try {
-             // Will hit Cloudflare Pages Function in Prod, or Express Server in Dev
-             const response = await fetch(`${API_URL}/api/referral`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ initData: initData || 'mock', startParam, telegramId: userId })
-             });
+             // Handle referral purely client-side via Firebase client SDK to support static deployments (Cloudflare Pages)
+             const referrerId = startParam.replace('ref_', '');
+             const success = await GameService.processReferral(userId.toString(), referrerId, fbUid, username, firstName);
              
-             if (response.ok) {
-                const result = await response.json();
-                if (result.verified) {
-                   isVerifiedReferral = true;
-                }
+             if (success) {
+                 isVerifiedReferral = true;
+                 set({ justReferred: true });
+             } else {
+                 console.error("Client referral rejected or already processed.");
              }
           } catch(e) {
-             console.error("Referral verification failed", e);
+             console.error("Referral processing failed", e);
           }
       }
 
-      // Fetch user data from Firestore directly, securely parsing referral if verified
-      const data: any = await GameService.fetchOrCreateUser(fbUid, userId.toString(), username, firstName, startParam, isVerifiedReferral);
+      // Fetch user data from Firestore directly (the API already handled any referral bonuses)
+      const data: any = await GameService.fetchOrCreateUser(userId.toString(), fbUid, username, firstName, startParam);
       
       const currentState = get();
+      if (!data) {
+        console.error("fetchOrCreateUser returned null, skipping user init.");
+        return;
+      }
       if (data.balance === 0 && currentState.balance > 0) {
         // Server likely restarted, sync our local data up
         currentState.sync();
