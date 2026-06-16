@@ -127,7 +127,8 @@ export function Admin() {
        // Filter out bots/test users if needed, or send to all valid telegram IDs
        const userIds = stats.users.filter(u => u.id && u.role !== 'banned').map(u => u.id);
        
-       const response = await fetch('/api/broadcast', {
+       const API_URL = import.meta.env.VITE_API_URL || '';
+       const response = await fetch(`${API_URL}/api/broadcast`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -136,15 +137,21 @@ export function Admin() {
           })
        });
        
-       const result = await response.json();
+       let result;
+       try {
+          result = await response.json();
+       } catch (jsonError) {
+          throw new Error('Server returned invalid response (possibly 404 not found or CORS issue). Check API connection.');
+       }
+
        if (response.ok) {
           setBroadcastResult({ sent: result.sent, failed: result.failed });
        } else {
-          alert('Broadcast failed: ' + result.error);
+          alert('Broadcast failed: ' + (result.error || 'Unknown error'));
        }
-    } catch (e) {
+    } catch (e: any) {
        console.error("Broadcast failed", e);
-       alert("An error occurred while broadcasting");
+       alert("An error occurred while broadcasting: " + (e.message || "Network issue"));
     } finally {
        setIsBroadcasting(false);
     }
@@ -734,3 +741,4 @@ export function Admin() {
     </div>
   );
 }
+
