@@ -27,7 +27,7 @@ const mockEconomyData = [
 
 export function Admin() {
   const { username } = useGameStore();
-  const [stats, setStats] = useState({ totalUsers: 0, totalEconomy: 0, bannedBots: 0, users: [] as any[] });
+  const [stats, setStats] = useState({ totalUsers: 0, totalEconomy: 0, bannedBots: 0, onlineUsers: 0, users: [] as any[] });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'players' | 'withdrawals' | 'goals'>('dashboard');
 
@@ -232,7 +232,7 @@ export function Admin() {
                 </div>
                 <p className="text-sm text-gray-400 font-medium mb-1">Active Now</p>
                 <h3 className="text-2xl font-bold font-mono tracking-tight text-white flex items-center gap-2">
-                  1,204 <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                  {loading ? '...' : formatNumber(stats.onlineUsers)} <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
                 </h3>
               </div>
 
