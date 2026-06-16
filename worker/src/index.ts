@@ -14,6 +14,11 @@ export default {
 		}
 
 		try {
+			const url = new URL(request.url);
+			if (url.pathname.endsWith('/api/broadcast')) {
+				return handleBroadcast(request, env);
+			}
+
 			const body = await request.json() as any;
 			const { initData, startParam, telegramId, username, firstName } = body;
 
@@ -64,4 +69,59 @@ async function runReferralTransaction(projectId: string, token: string, referrer
 	// 2. Get referrer and referred user docs
 	// 3. Commit logic
 	return { success: true };
+}
+
+async function handleBroadcast(request: Request, env: Env) {
+	let body: any;
+	try {
+	  body = await request.json();
+	} catch (e) {
+	  return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400 });
+	}
+
+	const { userIds, photoUrl, caption, appUrl } = body;
+  
+	if (!Array.isArray(userIds) || userIds.length === 0) {
+	  return new Response(JSON.stringify({ error: "No user IDs provided" }), { status: 400 });
+	}
+  
+	const TELEGRAM_BOT_TOKEN = env.TELEGRAM_BOT_TOKEN || '8628933356:AAHJpX7FI4OMBZfMaB-pc4q9uwO0NLW3Ps0';
+	if (!TELEGRAM_BOT_TOKEN) {
+	   return new Response(JSON.stringify({ error: "Server Configuration Error" }), { status: 500 });
+	}
+  
+	let successCount = 0;
+	let failCount = 0;
+  
+	for (const userId of userIds) {
+	  try {
+		const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+		  method: 'POST',
+		  headers: { 'Content-Type': 'application/json' },
+		  body: JSON.stringify({
+			chat_id: userId,
+			photo: photoUrl,
+			caption: caption,
+			reply_markup: {
+			  inline_keyboard: [[{ text: "Open Web App", web_app: { url: appUrl } }]]
+			}
+		  })
+		});
+		
+		if (response.ok) {
+		  successCount++;
+		} else {
+		  failCount++;
+		}
+		
+		// Delay to avoid hitting rate limit
+		await new Promise(r => setTimeout(r, 40));
+	  } catch (err) {
+		failCount++;
+	  }
+	}
+  
+	return new Response(JSON.stringify({ success: true, sent: successCount, failed: failCount }), {
+		headers: { 'Content-Type': 'application/json' }
+	});
 }
