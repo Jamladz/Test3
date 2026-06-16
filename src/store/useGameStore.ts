@@ -209,7 +209,7 @@ export const useGameStore = create<GameState>()(
     const now = Date.now();
     // Only mine up to the end of the active mining session
     const effectiveNow = Math.min(now, state.gramMiningActiveUntil);
-    const diffDays = Math.max(0, (effectiveNow - state.lastGramSync) / (1000 * 60 * 60 * 24));
+    const diffDays = (effectiveNow - Math.min(state.lastGramSync, state.gramMiningActiveUntil)) / (1000 * 60 * 60 * 24);
     
     if (diffDays > 0) {
       return {
@@ -260,7 +260,7 @@ export const useGameStore = create<GameState>()(
   syncTonMining: () => set((state) => {
     const now = Date.now();
     const effectiveNow = Math.min(now, state.tonMiningActiveUntil);
-    const diffDays = Math.max(0, (effectiveNow - state.lastTonSync) / (1000 * 60 * 60 * 24));
+    const diffDays = (effectiveNow - Math.min(state.lastTonSync, state.tonMiningActiveUntil)) / (1000 * 60 * 60 * 24);
     
     if (diffDays > 0) {
       return {
@@ -331,37 +331,36 @@ export const useGameStore = create<GameState>()(
   fetchUser: async (userId: string, username: string, firstName: string, startParam?: string, initData?: string) => {
     try {
       const fbUid = await AuthService.loginAnonymous(userId);
-      // We set firebaseUid to userId so that all GameService calls use the Telegram ID as the document ID!
-      set({ firebaseUid: userId.toString(), userId });
+      set({ firebaseUid: fbUid, userId });
 
       let isVerifiedReferral = false;
+      const API_URL = import.meta.env.VITE_API_URL || '';
 
-      // Perform client-side validation check of Telegram Data before allowing referral
+      // Perform server-side validation check of Telegram Data before allowing referral
       if (startParam && startParam.startsWith('ref_')) {
           try {
-             // Handle referral purely client-side via Firebase client SDK to support static deployments (Cloudflare Pages)
-             const referrerId = startParam.replace('ref_', '');
-             const success = await GameService.processReferral(userId.toString(), referrerId, fbUid, username, firstName);
+             // Will hit Cloudflare Pages Function in Prod, or Express Server in Dev
+             const response = await fetch(`${API_URL}/api/referral`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ initData: initData || 'mock', startParam, telegramId: userId })
+             });
              
-             if (success) {
-                 isVerifiedReferral = true;
-                 set({ justReferred: true });
-             } else {
-                 console.error("Client referral rejected or already processed.");
+             if (response.ok) {
+                const result = await response.json();
+                if (result.verified) {
+                   isVerifiedReferral = true;
+                }
              }
           } catch(e) {
-             console.error("Referral processing failed", e);
+             console.error("Referral verification failed", e);
           }
       }
 
-      // Fetch user data from Firestore directly (the API already handled any referral bonuses)
-      const data: any = await GameService.fetchOrCreateUser(userId.toString(), fbUid, username, firstName, startParam);
+      // Fetch user data from Firestore directly, securely parsing referral if verified
+      const data: any = await GameService.fetchOrCreateUser(fbUid, userId.toString(), username, firstName, startParam, isVerifiedReferral);
       
       const currentState = get();
-      if (!data) {
-        console.error("fetchOrCreateUser returned null, skipping user init.");
-        return;
-      }
       if (data.balance === 0 && currentState.balance > 0) {
         // Server likely restarted, sync our local data up
         currentState.sync();
@@ -427,7 +426,6 @@ export const useGameStore = create<GameState>()(
       });
       set(state => ({
          balance: state.balance + reward,
-         syncedBalance: state.syncedBalance + reward,
          missions: [...state.missions, missionId]
       }));
     } catch(e) {
@@ -438,30 +436,23 @@ export const useGameStore = create<GameState>()(
   sync: async () => {
     const state = get();
     if (!state.firebaseUid) return;
-    
-    // Always calculate最新 mining yields before saving to DB
-    get().syncTonMining();
-    get().syncGramMining();
-    
-    const latestState = get();
-    
     try {
-      const balanceDelta = Math.max(0, latestState.balance - latestState.syncedBalance);
+      const balanceDelta = Math.max(0, state.balance - state.syncedBalance);
       
-      const result = await GameService.syncState(latestState.firebaseUid, {
+      const result = await GameService.syncState(state.firebaseUid, {
           balanceDelta,
-          energy: latestState.energy,
+          energy: state.energy,
           lastLogin: Date.now(),
-          adsWatched: latestState.adsWatched,
-          tonBalance: latestState.tonBalance,
-          tonMiningRate: latestState.tonMiningRate,
-          lastTonSync: latestState.lastTonSync,
-          tonMiningActiveUntil: latestState.tonMiningActiveUntil,
-          gramBalance: latestState.gramBalance,
-          gramMiningRate: latestState.gramMiningRate,
-          lastGramSync: latestState.lastGramSync,
-          gramMiningActiveUntil: latestState.gramMiningActiveUntil,
-          hasClaimedPlushAirdrop: latestState.hasClaimedPlushAirdrop,
+          adsWatched: state.adsWatched,
+          tonBalance: state.tonBalance,
+          tonMiningRate: state.tonMiningRate,
+          lastTonSync: state.lastTonSync,
+          tonMiningActiveUntil: state.tonMiningActiveUntil,
+          gramBalance: state.gramBalance,
+          gramMiningRate: state.gramMiningRate,
+          lastGramSync: state.lastGramSync,
+          gramMiningActiveUntil: state.gramMiningActiveUntil,
+          hasClaimedPlushAirdrop: state.hasClaimedPlushAirdrop,
       });
       
       if (result) {
