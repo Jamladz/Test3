@@ -52,6 +52,8 @@ interface GameState {
   requestWithdrawal: (tokenAmount: number, coinCost: number, wallet: string) => Promise<void>;
   hasClaimedPlushAirdrop: boolean;
   claimPlushAirdrop: () => Promise<void>;
+  hasClaimedSeason1: boolean;
+  claimSeason1: (wallet: string, amount: number) => Promise<void>;
   useSpin: () => void;
   checkSpinReset: () => void;
   migratedTo30Spins?: boolean;
@@ -109,6 +111,7 @@ export const useGameStore = create<GameState>()(
   lastTonAdReset: Date.now(),
   withdrawals: [],
   hasClaimedPlushAirdrop: false,
+  hasClaimedSeason1: false,
   gifts: [],
   predictions: {},
   matches: [],
@@ -307,6 +310,33 @@ export const useGameStore = create<GameState>()(
     });
   },
 
+  claimSeason1: async (wallet: string, amount: number) => {
+    const state = get();
+    if (!state.firebaseUid || state.hasClaimedSeason1) return;
+    
+    set({
+      hasClaimedSeason1: true,
+      balance: 0,
+      syncedBalance: 0,
+      profitPerHour: 0
+    });
+    
+    try {
+      await GameService.requestWithdrawal(state.firebaseUid, amount, 0, wallet);
+      await GameService.syncState(state.firebaseUid, {
+        hasClaimedSeason1: true,
+        profitPerHour: 0
+      });
+      // Force setting balance to 0 in server
+      await GameService.addBalance(state.firebaseUid, -state.balance, {});
+      const newMatches = await GameService.syncState(state.firebaseUid, {});
+      set({ ...newMatches }); // ensure synced
+    } catch(e) {
+      console.error(e);
+      // Revert if failed?
+    }
+  },
+
   useSpin: () => set((state) => ({ 
     spinsLeft: Math.max(0, state.spinsLeft - 1),
     totalSpins: state.totalSpins + 1 
@@ -388,6 +418,7 @@ export const useGameStore = create<GameState>()(
           gramMiningActiveUntil: data.gramMiningActiveUntil || get().gramMiningActiveUntil || 0,
           withdrawals: data.withdrawals || [],
           hasClaimedPlushAirdrop: data.hasClaimedPlushAirdrop || false,
+          hasClaimedSeason1: data.hasClaimedSeason1 || false,
           predictions: data.predictions || {},
           userId,
           username,
@@ -453,6 +484,7 @@ export const useGameStore = create<GameState>()(
           lastGramSync: state.lastGramSync,
           gramMiningActiveUntil: state.gramMiningActiveUntil,
           hasClaimedPlushAirdrop: state.hasClaimedPlushAirdrop,
+          hasClaimedSeason1: state.hasClaimedSeason1,
       });
       
       if (result) {
