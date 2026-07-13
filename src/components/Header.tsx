@@ -5,6 +5,7 @@ import { Settings, Coins, Bell } from 'lucide-react';
 import { TonConnectButton, useTonWallet } from '@tonconnect/ui-react';
 import { GameService } from '../services/api';
 import { ProfileModal } from './ProfileModal';
+import { ActivityAirdropModal } from './ActivityAirdropModal';
 import { motion, AnimatePresence } from 'motion/react';
 
 export function Header() {
@@ -12,6 +13,14 @@ export function Header() {
   const wallet = useTonWallet();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
+  const [showActivityAirdrop, setShowActivityAirdrop] = useState(false);
+
+  useEffect(() => {
+    const handleOpenActivity = () => setShowActivityAirdrop(true);
+    window.addEventListener('openActivityAirdrop', handleOpenActivity);
+    return () => window.removeEventListener('openActivityAirdrop', handleOpenActivity);
+  }, []);
+
 
   const LEVELS = [
     { name: 'Bronze', min: 0 },
@@ -124,8 +133,8 @@ export function Header() {
         </div>
       </div>
       
-      <div className="flex w-full">
-        <div className="flex bg-[#1c1c1e] rounded-[10px] border border-white/5 p-2 px-3 w-full justify-center">
+      <div className="flex w-full gap-2 px-1">
+        <div className="flex bg-[#1c1c1e] rounded-[10px] border border-white/5 p-2 px-3 w-1/2 justify-center shrink-0">
           <div className="flex flex-col items-center">
             <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1">Profit per hour</span>
             <div className="flex items-center gap-1.5 font-mono">
@@ -134,12 +143,28 @@ export function Header() {
             </div>
           </div>
         </div>
+
+        <button 
+          onClick={() => setShowActivityAirdrop(true)}
+          className="flex bg-gradient-to-br from-[#00f3ff]/20 to-[#0099ff]/10 hover:from-[#00f3ff]/30 hover:to-[#0099ff]/20 border border-[#00f3ff]/30 rounded-[10px] p-2 w-1/2 justify-center items-center group transition-all relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:animate-[shimmer_1.5s_infinite]" />
+          <div className="flex flex-col items-center justify-center">
+            <span className="text-[9px] text-[#00f3ff] uppercase font-bold tracking-widest mb-1 drop-shadow-[0_0_5px_rgba(0,243,255,0.5)]">Airdrop</span>
+            <span className="text-sm font-bold text-white tracking-tight group-hover:scale-105 transition-transform flex items-center gap-1">
+              Calculate
+            </span>
+          </div>
+        </button>
       </div>
     </div>
     
     <AnimatePresence>
        {showProfile && (
            <ProfileModal onClose={() => setShowProfile(false)} />
+       )}
+       {showActivityAirdrop && (
+           <ActivityAirdropModal onClose={() => setShowActivityAirdrop(false)} />
        )}
     </AnimatePresence>
     </>
