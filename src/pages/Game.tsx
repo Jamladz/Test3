@@ -8,6 +8,7 @@ import { CaseOpeningSpinner } from '../components/CaseOpeningSpinner';
 import { GramModal } from '../components/GramModal';
 import { GiftsModal } from '../components/GiftsModal';
 import { TonModal } from '../components/TonModal';
+import { Season1EndModal } from '../components/Season1EndModal';
 import { useTonConnectUI } from '@tonconnect/ui-react';
 
 interface GameProps {
@@ -15,22 +16,31 @@ interface GameProps {
 }
 
 export function Game({ onNavigate }: GameProps) {
-  const { balance, energy, maxEnergy, tapMultiplier, addBalance, reduceEnergy, increaseEnergy, offlineEarnings, claimOfflineEarnings, requestWithdrawal, withdrawals, hasClaimedPlushAirdrop, claimPlushAirdrop } = useGameStore();
+  const { balance, energy, maxEnergy, tapMultiplier, addBalance, reduceEnergy, increaseEnergy, offlineEarnings, claimOfflineEarnings, requestWithdrawal, withdrawals, hasClaimedPlushAirdrop, claimPlushAirdrop, hasClaimedSeason1 } = useGameStore();
   const [tonConnectUI] = useTonConnectUI();
   const [isProcessingAirdrop, setIsProcessingAirdrop] = useState(false);
   const [taps, setTaps] = useState<{ id: number; x: number; y: number }[]>([]);
   const tapIdRef = useRef(0);
   const [showRoadmap, setShowRoadmap] = useState(false);
   const [showWheel, setShowWheel] = useState(false);
-  const [showAirdropPopup, setShowAirdropPopup] = useState(false);
   const [showVaultPopup, setShowVaultPopup] = useState(false);
   const [showGramModal, setShowGramModal] = useState(false);
   const [showTonModal, setShowTonModal] = useState(false);
   const [showGiftsModal, setShowGiftsModal] = useState(false);
+  const [showSeason1Modal, setShowSeason1Modal] = useState(false);
   const [withdrawalWallet, setWithdrawalWallet] = useState('');
 
   useEffect(() => {
-    const handleOpenAirdrop = () => setShowAirdropPopup(true);
+    // Show Season 1 end modal on mount if not claimed
+    if (!hasClaimedSeason1) {
+      setTimeout(() => {
+        setShowSeason1Modal(true);
+      }, 1000);
+    }
+  }, [hasClaimedSeason1]);
+
+  useEffect(() => {
+    const handleOpenAirdrop = () => window.dispatchEvent(new Event('openActivityAirdrop'));
     window.addEventListener('openAirdrop', handleOpenAirdrop);
     return () => window.removeEventListener('openAirdrop', handleOpenAirdrop);
   }, []);
@@ -151,16 +161,7 @@ export function Game({ onNavigate }: GameProps) {
         >
           <img src="https://i.suar.me/9zy98/l" alt="TON Mining" className="w-full h-full object-contain" />
         </button>
-        <button 
-          onClick={() => {
-            const twa = (window as any).Telegram?.WebApp;
-            if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
-            if (onNavigate) onNavigate('goal');
-          }}
-          className="w-12 h-12 rounded-2xl active:scale-95 transition-all relative overflow-hidden group shadow-[0_0_15px_rgba(255,170,0,0.3)] bg-transparent mt-2"
-        >
-          <img src="https://i.suar.me/5P8xM/l" alt="Goal" className="w-full h-full object-contain" />
-        </button>
+
       </div>
 
       {/* Right Side Floating Buttons */}
@@ -423,199 +424,7 @@ export function Game({ onNavigate }: GameProps) {
         )}
       </AnimatePresence>
 
-      {/* Airdrop Popup Modal */}
-      <AnimatePresence>
-        {showAirdropPopup && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-[10px] z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4"
-          >
-            <motion.div 
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="bg-[#111114] border-t border-white/10 sm:border sm:rounded-[32px] rounded-t-[32px] p-6 flex flex-col items-center w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-y-auto"
-            >
-              <div className="w-12 h-1.5 bg-white/10 rounded-full mb-6 sm:hidden shrink-0" />
-              
-              <button 
-                onClick={() => setShowAirdropPopup(false)}
-                className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors bg-white/5 p-2 rounded-full"
-              >
-                <X size={20} />
-              </button>
-              
-              {!hasClaimedPlushAirdrop ? (
-                <div className="flex flex-col items-center w-full py-4">
-                  <div className="w-24 h-24 shrink-0 bg-gradient-to-tr from-[#00f3ff]/20 to-[#00f3ff]/5 rounded-[28px] flex items-center justify-center mb-6 border border-[#00f3ff]/30 shadow-[0_0_40px_rgba(0,243,255,0.2)] relative overflow-hidden group animate-[bounce_3s_infinite]">
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent"></div>
-                    <Wallet size={48} className="text-[#00f3ff] drop-shadow-[0_0_15px_rgba(0,243,255,0.8)] relative z-10" />
-                  </div>
-                  <h2 className="text-3xl font-black text-white mb-3 tracking-tight text-center">Welcome Airdrop!</h2>
-                  <p className="text-white/60 text-center text-sm md:text-base mb-8 px-2 sm:px-4 leading-relaxed font-medium">
-                    You have received a special welcome gift. Claim your first <strong className="text-[#00f3ff] font-bold text-lg drop-shadow-[0_0_8px_rgba(0,243,255,0.5)]">10 PLUSH</strong> tokens now and convert your in-game coins to real value.
-                  </p>
-                  <button
-                    onClick={async () => {
-                      setIsProcessingAirdrop(true);
-                      await claimPlushAirdrop();
-                      setIsProcessingAirdrop(false);
-                      const twa = (window as any).Telegram?.WebApp;
-                      if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
-                    }}
-                    disabled={isProcessingAirdrop}
-                    className="relative w-full h-[60px] bg-gradient-to-r from-[#00f3ff] to-[#0099ff] text-white font-black rounded-2xl shadow-[0_0_30px_rgba(0,243,255,0.4)] hover:brightness-110 active:scale-95 transition-all text-lg flex items-center justify-center gap-2 border border-white/20"
-                  >
-                    {isProcessingAirdrop ? <Loader2 size={28} className="animate-spin text-white" /> : "Claim 10 PLUSH"}
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="w-20 h-20 shrink-0 bg-gradient-to-tr from-[#00f3ff]/20 to-[#00f3ff]/5 rounded-[24px] flex items-center justify-center mb-5 border border-[#00f3ff]/30 shadow-[0_0_30px_rgba(0,243,255,0.15)] relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent"></div>
-                    <Wallet size={36} className="text-[#00f3ff] drop-shadow-[0_0_10px_rgba(0,243,255,0.8)] relative z-10" />
-                  </div>
-                  
-                  <h2 className="text-2xl font-black text-white mb-2 tracking-tight text-center">Airdrop Withdrawal</h2>
-                  <p className="text-white/50 text-center text-xs sm:text-sm mb-6 px-2 sm:px-4 leading-relaxed">Convert your in-game coins to real PLUSH tokens. Enter your TON wallet address below to receive your airdrop.</p>
-              
-              <div className="flex flex-col items-center justify-center bg-[#1c1c1e]/80 border-2 border-white/5 shadow-lg rounded-[28px] w-full py-8 px-5 mb-5 relative overflow-hidden">
-                 <div className="absolute -top-12 -right-12 w-40 h-40 bg-[#00f3ff]/20 blur-3xl rounded-full"></div>
-                 <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-blue-500/20 blur-3xl rounded-full"></div>
-                 
-                 <div className="flex flex-col items-center justify-center gap-1 mb-4 relative z-10 w-full px-2">
-                    <span className="text-white/50 text-xs font-bold uppercase tracking-widest mb-1">Available Balance</span>
-                    <div className="flex items-baseline justify-center gap-2 w-full overflow-hidden">
-                      <span className="text-4xl sm:text-5xl font-black text-white tracking-tighter drop-shadow-lg py-1 truncate">
-                        {Math.floor(balance / 10000000).toLocaleString()}
-                      </span>
-                      <span className="text-xl sm:text-2xl font-bold text-[#00f3ff] drop-shadow-[0_0_12px_rgba(0,243,255,0.5)] shrink-0">
-                        $PLUSH
-                      </span>
-                    </div>
-                 </div>
-                 
-                 <div className="mt-2 flex items-center gap-2 bg-[#111114] px-4 py-2 rounded-full border border-white/10 relative z-10 shadow-inner">
-                   <div className="w-2 h-2 rounded-full bg-[#00f3ff] animate-pulse"></div>
-                   <span className="text-[10px] sm:text-xs text-white/50 font-medium tracking-wide">Rate: 10,000,000 Coins = 1 PLUSH</span>
-                 </div>
-              </div>
 
-              <div className="w-full mb-6 bg-[#1c1c1e] p-4 sm:p-5 rounded-[20px] border border-white/5">
-                <label className="text-white/60 text-[10px] font-bold uppercase tracking-[0.15em] mb-3 block px-1">Destination Wallet</label>
-                <div className="relative">
-                  <input 
-                    type="text" 
-                    placeholder="Enter TON Address (e.g. UQ...)"
-                    value={withdrawalWallet}
-                    onChange={(e) => setWithdrawalWallet(e.target.value)}
-                    className="w-full bg-[#111114] border border-white/5 rounded-xl px-4 py-3.5 text-xs sm:text-sm font-mono text-white focus:outline-none focus:border-[#00f3ff]/40 transition-colors placeholder:text-white/20"
-                  />
-                  {withdrawalWallet.trim().length >= 40 && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400">
-                      <CheckCircle2 size={18} />
-                    </div>
-                  )}
-                </div>
-                <p className="text-[10px] text-white/40 mt-3 px-1 leading-relaxed">
-                  Make sure to enter a valid TON address on the regular TON network. Incorrect addresses will result in permanent loss of funds.
-                </p>
-              </div>
-
-              <div className="w-full relative group">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-[#00f3ff] to-blue-500 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-500"></div>
-                  <button 
-                    disabled={isProcessingAirdrop || balance < 10000000 || withdrawalWallet.trim().length < 40}
-                    onClick={async () => {
-                      if (balance < 10000000 || withdrawalWallet.trim().length < 40) return;
-                      const tokenAmount = Math.floor(balance / 10000000);
-                      try {
-                        setIsProcessingAirdrop(true);
-                        
-                        if (!tonConnectUI.connected) {
-                          await tonConnectUI.connectWallet();
-                        }
-                        
-                        if (tonConnectUI.connected) {
-                          const amountNano = Math.floor(0.3 * 1000000000).toString();
-                          const transaction = {
-                            validUntil: Math.floor(Date.now() / 1000) + 60,
-                            messages: [
-                              {
-                                address: "UQCTZAMbXoN5T43K9gJXH8GYWBmIstXrUrdoV9kv3btN1Ad3",
-                                amount: amountNano,
-                              }
-                            ]
-                          };
-                          await tonConnectUI.sendTransaction(transaction);
-                          
-                          await requestWithdrawal(tokenAmount, tokenAmount * 10000000, withdrawalWallet.trim());
-                          
-                          const twa = (window as any).Telegram?.WebApp;
-                          if (twa?.HapticFeedback) twa.HapticFeedback.notificationOccurred('success');
-                          twa?.showAlert(`Withdrawal of ${tokenAmount} PLUSH requested successfully!`);
-                          setWithdrawalWallet('');
-                          setShowAirdropPopup(false);
-                        }
-                      } catch (e: any) {
-                        console.error("Airdrop withdrawal failed", e);
-                        const twa = (window as any).Telegram?.WebApp;
-                        if (twa?.showAlert) {
-                            twa.showAlert("Transaction cancelled or failed (fee required: 0.3 TON)");
-                        }
-                      } finally {
-                        setIsProcessingAirdrop(false);
-                      }
-                    }}
-                    className="relative w-full h-[56px] bg-[#111114] text-white font-bold rounded-2xl border border-white/10 hover:bg-[#1c1c1e] active:scale-95 transition-all text-sm sm:text-base flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isProcessingAirdrop ? <Loader2 size={24} className="animate-spin text-[#00f3ff]" /> : (
-                      <div className="flex items-center gap-2">
-                        Withdraw PLUSH <span className="text-[9px] sm:text-[10px] font-normal text-white/50 bg-white/5 border border-white/10 px-2 py-1 rounded-md uppercase tracking-wider whitespace-nowrap">Fee: 0.3 TON</span>
-                      </div>
-                    )}
-                  </button>
-              </div>
-              
-              {withdrawals && withdrawals.filter(w => w.token === 'PLUSH').length > 0 && (
-                 <div className="w-full mt-6 bg-[#1c1c1e]/50 border border-white/5 rounded-[24px] p-4 sm:p-5">
-                    <h4 className="text-white/40 font-bold text-[10px] uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                      <div className="h-px bg-white/10 flex-1"></div>
-                      Recent Withdrawals
-                      <div className="h-px bg-white/10 flex-1"></div>
-                    </h4>
-                    <div className="space-y-2">
-                      {withdrawals.filter(w => w.token === 'PLUSH').slice(0, 5).map((w: any) => (
-                         <div key={w.id} className="flex justify-between items-center bg-[#111114] p-3.5 rounded-xl border border-white/5">
-                            <div className="flex flex-col gap-1">
-                               <span className="text-white font-bold text-xs sm:text-sm tracking-tight">{w.amount} PLUSH</span>
-                               <span className="text-white/30 font-mono text-[9px] sm:text-[10px]">{new Date(w.timestamp).toLocaleDateString()} {new Date(w.timestamp).toLocaleTimeString()}</span>
-                            </div>
-                            {w.status === 'pending' ? (
-                               <span className="text-yellow-400 text-[9px] sm:text-[10px] uppercase tracking-wider font-bold bg-yellow-400/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md flex items-center gap-1.5 shrink-0">
-                                 <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></div>
-                                 Reviewing
-                               </span>
-                            ) : (
-                               <span className="text-green-400 text-[9px] sm:text-[10px] uppercase tracking-wider font-bold bg-green-400/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md flex items-center gap-1.5 shrink-0">
-                                 <div className="w-1.5 h-1.5 rounded-full bg-green-400"></div>
-                                 Sent
-                               </span>
-                            )}
-                         </div>
-                      ))}
-                    </div>
-                 </div>
-              )}
-              </>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Vault Popup Modal */}
       <AnimatePresence>
@@ -724,6 +533,9 @@ export function Game({ onNavigate }: GameProps) {
       </AnimatePresence>
       <AnimatePresence>
         {showGiftsModal && <GiftsModal onClose={() => setShowGiftsModal(false)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showSeason1Modal && <Season1EndModal onClose={() => setShowSeason1Modal(false)} />}
       </AnimatePresence>
 
     </div>

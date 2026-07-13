@@ -49,6 +49,22 @@ export function Admin() {
   const [broadcastResult, setBroadcastResult] = useState<{sent: number, failed: number} | null>(null);
 
   
+  const safeConfirm = (msg: string) => {
+    try {
+      return window.confirm(msg);
+    } catch {
+      return true; // Fallback to auto-accept if confirm is blocked by iframe sandbox
+    }
+  };
+
+  const safeAlert = (msg: string) => {
+    try {
+      window.alert(msg);
+    } catch {
+      console.log('Alert blocked by sandbox: ' + msg);
+    }
+  };
+
   const fetchStats = async () => {
     try {
       const data = await GameService.getAdminStats();
@@ -70,21 +86,21 @@ export function Admin() {
   }, [username]);
 
   const handleBanToggle = async (uid: string, isBanned: boolean) => {
-    if (confirm(`Are you sure you want to ${isBanned ? 'unban' : 'ban'} this user?`)) {
+    if (safeConfirm(`Are you sure you want to ${isBanned ? 'unban' : 'ban'} this user?`)) {
       await GameService.setBanStatus(uid, !isBanned);
       fetchStats();
     }
   };
 
   const handleConfirmWithdrawal = async (uid: string, withdrawalId: string) => {
-    if (confirm(`Confirm you sent TON to their wallet?`)) {
+    if (safeConfirm(`Confirm you sent TON to their wallet?`)) {
       await GameService.confirmWithdrawal(uid, withdrawalId);
       fetchStats();
     }
   };
 
   const handleAddMatch = async () => {
-    if (!newMatch.matchDate) return alert("Please select a date and time");
+    if (!newMatch.matchDate) return safeAlert("Please select a date and time");
     const d = new Date(newMatch.matchDate);
     const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
     const matchData = {
@@ -107,7 +123,7 @@ export function Admin() {
        'teamB.score': scores.b 
     };
     await GameService.updateMatch(id, data);
-    alert('Scores updated!');
+    safeAlert('Scores updated!');
     fetchMatches();
   };
 
@@ -119,7 +135,7 @@ export function Admin() {
   };
 
   const handleBroadcast = async () => {
-    if (!confirm(`Are you sure you want to broadcast this message to all ${stats.totalUsers} users?`)) return;
+    if (!safeConfirm(`Are you sure you want to broadcast this message to all ${stats.totalUsers} users?`)) return;
     
     setIsBroadcasting(true);
     setBroadcastResult(null);
@@ -127,7 +143,7 @@ export function Admin() {
        // Filter out bots/test users if needed, or send to all valid telegram IDs
        const userIds = stats.users.filter(u => u.id && u.role !== 'banned').map(u => u.id);
        
-       const API_URL = import.meta.env.VITE_API_URL || '';
+       const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
        const response = await fetch(`${API_URL}/api/broadcast`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -139,19 +155,25 @@ export function Admin() {
        
        let result;
        try {
-          result = await response.json();
-       } catch (jsonError) {
-          throw new Error('Server returned invalid response (possibly 404 not found or CORS issue). Check API connection.');
+          const text = await response.text();
+          try {
+             result = JSON.parse(text);
+          } catch (jsonError) {
+             throw new Error(`Server returned non-JSON response (Status ${response.status}): ${text.substring(0, 150)}`);
+          }
+       } catch (error: any) {
+          throw new Error('Response error: ' + error.message);
        }
 
        if (response.ok) {
-          setBroadcastResult({ sent: result.sent, failed: result.failed });
+          setBroadcastResult({ sent: result.targeted || result.sent || userIds.length, failed: result.failed || 0 });
+          safeAlert(result.message || 'Broadcast completed');
        } else {
-          alert('Broadcast failed: ' + (result.error || 'Unknown error'));
+          safeAlert('Broadcast failed: ' + (result.error || 'Unknown error'));
        }
     } catch (e: any) {
        console.error("Broadcast failed", e);
-       alert("An error occurred while broadcasting: " + (e.message || "Network issue"));
+       safeAlert("An error occurred while broadcasting: " + (e.message || "Network issue"));
     } finally {
        setIsBroadcasting(false);
     }
@@ -228,17 +250,7 @@ export function Admin() {
               <span className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full animate-pulse">{pendingWithdrawalsCount}</span>
             )}
           </button>
-          <button
-            onClick={() => setActiveTab('goals')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
-              activeTab === 'goals' 
-                ? 'bg-green-500/10 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.1)]' 
-                : 'text-gray-500 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <Activity size={16} />
-            Goals
-          </button>
+
           <button
             onClick={() => setActiveTab('broadcast')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
@@ -447,9 +459,9 @@ export function Admin() {
                                      navigator.clipboard.writeText(walletToCopy).then(() => {
                                        const twa = (window as any).Telegram?.WebApp;
                                        if (twa?.HapticFeedback) twa.HapticFeedback.impactOccurred('light');
-                                       alert('Wallet address copied to clipboard!');
+                                       safeAlert('Wallet address copied to clipboard!');
                                      }).catch(() => {
-                                       alert('Failed to copy. ' + walletToCopy);
+                                       safeAlert('Failed to copy. ' + walletToCopy);
                                      });
                                    }}
                                    className="p-2 bg-white/5 hover:bg-white/10 rounded-md transition-all active:scale-95 text-gray-400 hover:text-white shrink-0 opacity-80 group-hover:opacity-100"
@@ -540,100 +552,7 @@ export function Admin() {
           </div>
         )}
 
-        {/* GOALS TAB */}
-        {activeTab === 'goals' && (
-        <div className="space-y-4 pb-8 px-4 sm:px-6">
-          <h2 className="font-bold text-sm tracking-widest text-gray-400 mb-2">MANAGE MATCHES & PREDICTIONS</h2>
-          
-          <div className="bg-[#151518] border border-white/5 bg-white/5 p-4 rounded-xl mb-6">
-            <h3 className="font-bold text-sm mb-4">Add New Match</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Team A Name</label>
-                  <input type="text" className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#00f3ff]" value={newMatch.teamA.name} onChange={e => setNewMatch({...newMatch, teamA: {...newMatch.teamA, name: e.target.value}})} />
-               </div>
-               <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Team A Image URL</label>
-                  <input type="text" className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#00f3ff]" value={newMatch.teamA.image} onChange={e => setNewMatch({...newMatch, teamA: {...newMatch.teamA, image: e.target.value}})} />
-               </div>
-               <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Team B Name</label>
-                  <input type="text" className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#00f3ff]" value={newMatch.teamB.name} onChange={e => setNewMatch({...newMatch, teamB: {...newMatch.teamB, name: e.target.value}})} />
-               </div>
-               <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Team B Image URL</label>
-                  <input type="text" className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#00f3ff]" value={newMatch.teamB.image} onChange={e => setNewMatch({...newMatch, teamB: {...newMatch.teamB, image: e.target.value}})} />
-               </div>
-               <div className="md:col-span-2">
-                  <label className="text-xs text-gray-500 mb-1 block">Match Date & Time</label>
-                  <input type="datetime-local" className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#00f3ff]" value={newMatch.matchDate} onChange={e => setNewMatch({...newMatch, matchDate: e.target.value})} />
-               </div>
-            </div>
-            <button
-               onClick={handleAddMatch}
-               className="mt-4 w-full bg-[#00f3ff] hover:bg-[#00f3ff]/90 text-black py-2 rounded font-bold transition-all active:scale-95"
-            >
-               Create Match
-            </button>
-          </div>
 
-          <div className="space-y-4">
-             {matches.map(m => (
-               <div key={m.id} className="bg-[#151518] border border-white/5 p-4 rounded-xl">
-                  <div className="flex justify-between items-center mb-3">
-                     <span className="text-xs bg-white/10 px-2 py-1 rounded">{m.day} {m.month} {m.matchTime}</span>
-                     <span className={`text-xs px-2 py-1 rounded uppercase font-bold focus:outline-none focus:border-[#00f3ff] ${m.status === 'live' ? 'bg-red-500/20 text-red-500' : m.status === 'upcoming' ? 'bg-green-500/20 text-green-500' : 'bg-gray-500/20 text-gray-400'}`}>
-                        {m.status}
-                     </span>
-                  </div>
-                  <div className="flex items-center justify-between mb-4">
-                     <div className="flex gap-2 items-center flex-1">
-                        <img src={m.teamA.image} alt={m.teamA.name} className="w-8 h-8 rounded-full bg-white/5" />
-                        <span className="font-bold text-sm truncate">{m.teamA.name}</span>
-                     </div>
-                     
-                     <div className="flex gap-2 items-center justify-center px-4">
-                        <input 
-                          type="number" 
-                          min="0"
-                          className="w-10 bg-black/40 border border-white/10 rounded py-1 text-center text-sm font-bold focus:outline-none focus:border-[#00f3ff]" 
-                          value={editingScores[m.id]?.a ?? m.teamA.score ?? 0}
-                          onChange={e => setEditingScores({...editingScores, [m.id]: { ...(editingScores[m.id] || {a:0, b:0}), a: parseInt(e.target.value) || 0 }})}
-                        />
-                        <span className="text-xs text-gray-500 font-bold">-</span>
-                        <input 
-                          type="number" 
-                          min="0"
-                          className="w-10 bg-black/40 border border-white/10 rounded py-1 text-center text-sm font-bold focus:outline-none focus:border-[#00f3ff]" 
-                          value={editingScores[m.id]?.b ?? m.teamB.score ?? 0}
-                          onChange={e => setEditingScores({...editingScores, [m.id]: { ...(editingScores[m.id] || {a:0, b:0}), b: parseInt(e.target.value) || 0 }})}
-                        />
-                     </div>
-
-                     <div className="flex gap-2 items-center flex-1 justify-end">
-                        <span className="font-bold text-sm truncate">{m.teamB.name}</span>
-                        <img src={m.teamB.image} alt={m.teamB.name} className="w-8 h-8 rounded-full bg-white/5" />
-                     </div>
-                  </div>
-                  
-                  <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-white/5">
-                     <button onClick={() => handleUpdateMatchScore(m.id)} className="w-full bg-green-500/20 text-green-400 hover:bg-green-500/30 text-xs py-2 rounded transition-all font-bold mb-2 border border-green-500/20">Save Scores</button>
-                     <div className="flex gap-2">
-                        <button onClick={() => handleUpdateMatchStatus(m.id, 'upcoming')} className="flex-1 bg-white/5 hover:bg-white/10 text-xs py-2 rounded transition-all">Set Upcoming</button>
-                        <button onClick={() => handleUpdateMatchStatus(m.id, 'live')} className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs py-2 rounded transition-all">Set LIVE</button>
-                     </div>
-                     <div className="grid grid-cols-3 gap-2 mt-2">
-                        <button onClick={() => handleUpdateMatchStatus(m.id, 'completed', 'A')} className="bg-[#00f3ff]/20 text-[#00f3ff] text-xs py-2 rounded">Winner: {m.teamA.name}</button>
-                        <button onClick={() => handleUpdateMatchStatus(m.id, 'completed', 'draw')} className="bg-yellow-500/20 text-yellow-500 text-xs py-2 rounded">Draw</button>
-                        <button onClick={() => handleUpdateMatchStatus(m.id, 'completed', 'B')} className="bg-[#00f3ff]/20 text-[#00f3ff] text-xs py-2 rounded">Winner: {m.teamB.name}</button>
-                     </div>
-                  </div>
-               </div>
-             ))}
-             {matches.length === 0 && <div className="text-center text-gray-500 py-4 text-sm mt-4">No matches added yet</div>}
-          </div>
-        </div>
-      )}
 
         {/* BROADCAST TAB */}
         {activeTab === 'broadcast' && (
