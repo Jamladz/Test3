@@ -4,3 +4,6 @@ pages_build_output_dir = "dist"
 
 [vars]
 TELEGRAM_BOT_TOKEN = "8628933356:AAHJpX7FI4OMBZfMaB-pc4q9uwO0NLW3Ps0"
+
+[assets]
+directory = "./dist"
