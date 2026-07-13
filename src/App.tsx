@@ -8,7 +8,7 @@ import { Mine } from './pages/Mine';
 import { Friends } from './pages/Friends';
 import { Tasks } from './pages/Tasks';
 import { Admin } from './pages/Admin';
-import { Goal } from './pages/Goal';
+
 import { ReferralSuccessModal } from './components/ReferralSuccessModal';
 import { AdSequenceOverlay } from './components/AdSequenceOverlay';
 
@@ -124,7 +124,7 @@ export default function App() {
         {currentTab === 'tasks' && <Tasks />}
         {currentTab === 'friends' && <Friends />}
         {currentTab === 'admin' && role === 'admin' && <Admin />}
-        {currentTab === 'goal' && <Goal onClose={() => setCurrentTab('game')} />}
+
 
         <Navigation currentTab={currentTab} setTab={setCurrentTab} isAdmin={role === 'admin'} />
       </div>
