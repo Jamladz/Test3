@@ -2,8 +2,5 @@ name = "plushtap"
 compatibility_date = "2024-03-20"
 pages_build_output_dir = "dist"
 
-[assets]
-directory = "./dist"
-
-[build]
-command = "npm run build"
+[vars]
+TELEGRAM_BOT_TOKEN = "8628933356:AAHJpX7FI4OMBZfMaB-pc4q9uwO0NLW3Ps0"

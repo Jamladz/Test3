@@ -63,42 +63,44 @@ async function startServer() {
       return res.status(400).json({ error: "No user IDs provided" });
     }
 
-    let successCount = 0;
-    let failCount = 0;
+    // Return immediately to avoid HTTP timeouts for large arrays
+    res.status(200).json({ success: true, message: "Broadcast started in background", targeted: userIds.length });
 
-    // We process sequentially to avoid rate-limiting from Telegram API (30 msgs/sec limit mostly)
-    for (const userId of userIds) {
-      try {
-        const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: userId,
-            photo: photoUrl,
-            caption: caption,
-            reply_markup: {
-              inline_keyboard: [[{ text: "Open Web App", web_app: { url: appUrl } }]]
-            }
-          })
-        });
-        
-        if (response.ok) {
-          successCount++;
-        } else {
-          const errText = await response.text();
-          console.error(`Failed to send to ${userId}:`, errText);
+    // Process sequentially in background to avoid rate-limiting
+    (async () => {
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const userId of userIds) {
+        try {
+          const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: userId,
+              photo: photoUrl,
+              caption: caption,
+              reply_markup: {
+                inline_keyboard: [[{ text: "Open Web App", web_app: { url: appUrl } }]]
+              }
+            })
+          });
+          
+          if (response.ok) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+          
+          // Sleep 40ms to avoid hitting limits (approx. ~25 msgs/sec)
+          await new Promise(r => setTimeout(r, 40));
+        } catch (err) {
+          console.error(`Error broadcasting to ${userId}:`, err);
           failCount++;
         }
-        
-        // Sleep 40ms to avoid hitting limits (approx. ~25 msgs/sec)
-        await new Promise(r => setTimeout(r, 40));
-      } catch (err) {
-        console.error(`Error broadcasting to ${userId}:`, err);
-        failCount++;
       }
-    }
-
-    return res.status(200).json({ success: true, sent: successCount, failed: failCount });
+      console.log(`Broadcast complete. Sent: ${successCount}, Failed: ${failCount}`);
+    })();
   });
 
   // API endpoint for frontend to call for secure backend referral handling
