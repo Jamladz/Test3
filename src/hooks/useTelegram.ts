@@ -6,12 +6,16 @@ export function useTelegramAutoLogin() {
   useEffect(() => {
     const twa = (window as any).Telegram?.WebApp;
     if (twa) {
-      twa.ready();
-      twa.expand();
-      
-      // Set to modern dark theme if applicable
-      twa.setHeaderColor('#000000');
-      twa.setBackgroundColor('#000000');
+      try {
+        twa.ready();
+        twa.expand();
+        
+        // Set to modern dark theme if applicable
+        if (twa.setHeaderColor) twa.setHeaderColor('#000000');
+        if (twa.setBackgroundColor) twa.setBackgroundColor('#000000');
+      } catch (e) {
+        console.warn('TWA initialization warning:', e);
+      }
 
       let start_param = 
         twa.initDataUnsafe?.start_param || 
