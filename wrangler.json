@@ -2,5 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "plush-tap-app",
   "compatibility_date": "2026-07-23",
-  "pages_build_output_dir": "./dist"
+  "pages_build_output_dir": "./dist",
+  "assets": {
+    "directory": "./dist"
+  }
 }
