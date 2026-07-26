@@ -106,30 +106,44 @@ export function ReferralHub() {
         <div className="bg-zinc-900/90 p-3.5 rounded-2xl border border-zinc-800 flex flex-col justify-between relative overflow-hidden">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded">
-              Regular User
+              Regular Friend
             </span>
             <UserPlus size={16} className="text-blue-400" />
           </div>
-          <div>
-            <p className="text-xs font-bold text-white">+2,000,000 $PLUSH</p>
-            <p className="text-[11px] font-extrabold text-cyan-300 flex items-center gap-1 mt-0.5">
-              <GramIcon size={12} /> +0.005 GRAM
-            </p>
+          <div className="space-y-1.5">
+            <div>
+              <span className="text-[9px] font-bold text-zinc-400 block uppercase">You Receive</span>
+              <p className="text-xs font-bold text-white">+2,000,000 $PLUSH</p>
+              <p className="text-[10px] font-extrabold text-cyan-300 flex items-center gap-1">
+                <GramIcon size={10} /> +0.005 GRAM
+              </p>
+            </div>
+            <div className="pt-1 border-t border-zinc-800">
+              <span className="text-[9px] font-bold text-emerald-400 block uppercase">Friend Gets</span>
+              <p className="text-[11px] font-semibold text-emerald-300">+1,000,000 $PLUSH + 0.002 GRAM</p>
+            </div>
           </div>
         </div>
 
         <div className="bg-gradient-to-br from-amber-500/10 via-zinc-900 to-zinc-900 p-3.5 rounded-2xl border border-amber-500/30 flex flex-col justify-between relative overflow-hidden shadow-lg shadow-amber-500/5">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">
-              Premium User ⭐
+              Premium Friend ⭐
             </span>
             <Sparkles size={16} className="text-amber-400" />
           </div>
-          <div>
-            <p className="text-xs font-bold text-amber-200">+10,000,000 $PLUSH</p>
-            <p className="text-[11px] font-extrabold text-cyan-300 flex items-center gap-1 mt-0.5">
-              <GramIcon size={12} /> +0.025 GRAM
-            </p>
+          <div className="space-y-1.5">
+            <div>
+              <span className="text-[9px] font-bold text-amber-400/80 block uppercase">You Receive</span>
+              <p className="text-xs font-bold text-amber-200">+10,000,000 $PLUSH</p>
+              <p className="text-[10px] font-extrabold text-cyan-300 flex items-center gap-1">
+                <GramIcon size={10} /> +0.025 GRAM
+              </p>
+            </div>
+            <div className="pt-1 border-t border-amber-500/20">
+              <span className="text-[9px] font-bold text-emerald-400 block uppercase">Friend Gets</span>
+              <p className="text-[11px] font-semibold text-emerald-300">+5,000,000 $PLUSH + 0.010 GRAM</p>
+            </div>
           </div>
         </div>
       </div>
