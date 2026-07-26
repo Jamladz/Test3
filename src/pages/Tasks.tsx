@@ -19,9 +19,9 @@ const ADSGRAM_BLOCKS: AdBlockConfig[] = [
   {
     id: "int-35086",
     title: "Standard Adsgram Video Stream",
-    subtitle: "Official Adsgram rewarded video ad block #35086",
+    subtitle: "Official Adsgram rewarded video stream",
     plushP: 10000000, // 1,000 $PLUSH
-    badge: "Official Block int-35086",
+    badge: "Official Stream",
     gradientClass: "from-orange-500/10 via-amber-500/5 to-zinc-950",
     borderClass: "border-orange-500/40",
     badgeClass: "bg-orange-500/20 text-orange-300 border-orange-500/40",
@@ -29,9 +29,9 @@ const ADSGRAM_BLOCKS: AdBlockConfig[] = [
   {
     id: "int-35088",
     title: "Adsgram Gold Super Stream",
-    subtitle: "High reward Adsgram video block #35088",
+    subtitle: "High reward Adsgram video stream",
     plushP: 20000000, // 2,000 $PLUSH
-    badge: "Super Block int-35088",
+    badge: "Super Stream",
     gradientClass: "from-purple-900/20 via-amber-500/10 to-zinc-950",
     borderClass: "border-purple-500/40",
     badgeClass: "bg-purple-500/20 text-purple-300 border-purple-500/40",
@@ -39,9 +39,9 @@ const ADSGRAM_BLOCKS: AdBlockConfig[] = [
   {
     id: "int-35089",
     title: "Adsgram Express Speed Ad",
-    subtitle: "Fast boost Adsgram video block #35089",
+    subtitle: "Fast boost Adsgram video stream",
     plushP: 15000000, // 1,500 $PLUSH
-    badge: "Express Block int-35089",
+    badge: "Express Stream",
     gradientClass: "from-cyan-500/10 via-emerald-500/5 to-zinc-950",
     borderClass: "border-cyan-500/40",
     badgeClass: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
@@ -122,9 +122,6 @@ export function Tasks() {
               <div className="flex items-center justify-between mb-3">
                 <span className={`inline-flex items-center gap-1.5 border px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${block.badgeClass}`}>
                   <Sparkles size={11} /> {block.badge}
-                </span>
-                <span className="text-[10px] font-mono text-zinc-500">
-                  Block ID: {block.id}
                 </span>
               </div>
 
