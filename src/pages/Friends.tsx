@@ -10,6 +10,7 @@ export function Friends() {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'contest' | 'list'>('contest');
   const [leaderboard, setLeaderboard] = useState<WeeklyLeaderboardUser[]>([]);
+  const [userRank, setUserRank] = useState<number>(99);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
 
   const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -22,12 +23,19 @@ export function Friends() {
   useEffect(() => {
     async function loadBoard() {
       setLoadingLeaderboard(true);
-      const data = await getWeeklyReferralLeaderboard();
-      setLeaderboard(data);
+      const currentUserInfo = {
+        id: userId,
+        name: tgUser?.first_name ? `${tgUser.first_name}${tgUser.last_name ? ' ' + tgUser.last_name : ''}` : 'You (Current Player)',
+        username: tgUser?.username ? `@${tgUser.username}` : `@user_${userId.slice(-4)}`,
+        weeklyReferralCount: weeklyReferralCount || 0
+      };
+      const { leaderboard: list, userRank: rank } = await getWeeklyReferralLeaderboard(currentUserInfo);
+      setLeaderboard(list);
+      setUserRank(rank);
       setLoadingLeaderboard(false);
     }
     loadBoard();
-  }, [weeklyReferralCount]);
+  }, [weeklyReferralCount, userId]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralLink);
@@ -164,7 +172,7 @@ export function Friends() {
               <div className="text-right">
                 <span className="text-[10px] text-amber-400 block font-bold">Your Current Rank</span>
                 <span className="text-xs sm:text-sm font-black text-amber-300">
-                  {weeklyReferralCount > 0 ? `#${Math.max(1, 15 - weeklyReferralCount)}` : 'Not Ranked Yet'}
+                  Rank #{userRank}
                 </span>
               </div>
             </div>
@@ -201,9 +209,9 @@ export function Friends() {
           <div className="mb-4">
             <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider text-left mb-3 flex items-center justify-between">
               <span className="flex items-center gap-1 text-amber-400">
-                <Flame size={14} /> Weekly Contest Champions
+                <Flame size={14} /> Weekly Contest Champions (Top 10)
               </span>
-              <span>Live Standings</span>
+              <span className="text-[10px] text-zinc-500 font-normal">Rotates Weekly</span>
             </h3>
 
             {loadingLeaderboard ? (
@@ -214,23 +222,40 @@ export function Friends() {
                   <div
                     key={user.id}
                     className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
-                      user.rank === 1
-                        ? 'bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-zinc-900 border-amber-500/40'
-                        : user.rank === 2
-                          ? 'bg-gradient-to-r from-slate-500/10 via-zinc-900 to-zinc-900 border-slate-500/30'
-                          : user.rank === 3
-                            ? 'bg-gradient-to-r from-amber-800/10 via-zinc-900 to-zinc-900 border-amber-800/30'
-                            : 'bg-zinc-900/90 border-zinc-800/80'
+                      user.isCurrentUser
+                        ? 'bg-gradient-to-r from-cyan-950/70 via-zinc-900 to-zinc-900 border-cyan-400 shadow-lg shadow-cyan-500/10'
+                        : user.rank === 1
+                          ? 'bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-zinc-900 border-amber-500/40'
+                          : user.rank === 2
+                            ? 'bg-gradient-to-r from-slate-500/10 via-zinc-900 to-zinc-900 border-slate-500/30'
+                            : user.rank === 3
+                              ? 'bg-gradient-to-r from-amber-800/10 via-zinc-900 to-zinc-900 border-amber-800/30'
+                              : 'bg-zinc-900/90 border-zinc-800/80'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                       <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl font-black text-xs flex items-center justify-center shrink-0 ${
-                        user.rank === 1 ? 'bg-amber-400 text-black' : user.rank === 2 ? 'bg-slate-300 text-black' : user.rank === 3 ? 'bg-amber-700 text-white' : 'bg-zinc-800 text-zinc-400'
+                        user.isCurrentUser
+                          ? 'bg-cyan-500 text-black'
+                          : user.rank === 1
+                            ? 'bg-amber-400 text-black'
+                            : user.rank === 2
+                              ? 'bg-slate-300 text-black'
+                              : user.rank === 3
+                                ? 'bg-amber-700 text-white'
+                                : 'bg-zinc-800 text-zinc-400'
                       }`}>
                         #{user.rank}
                       </div>
                       <div className="text-left truncate min-w-0">
-                        <span className="text-xs font-bold text-white block truncate">{user.name}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-white block truncate">{user.name}</span>
+                          {user.isCurrentUser && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shrink-0">
+                              ✨ YOU
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[10px] text-zinc-500 truncate block">{user.username}</span>
                       </div>
                     </div>
@@ -246,6 +271,33 @@ export function Friends() {
                     </div>
                   </div>
                 ))}
+
+                {/* Show user standing footer if outside Top 10 */}
+                {!leaderboard.some(u => u.isCurrentUser) && (
+                  <div className="mt-3 p-3 bg-gradient-to-r from-cyan-950/40 via-zinc-900 to-zinc-900 border border-cyan-500/40 rounded-2xl flex items-center justify-between shadow-lg">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-black text-xs flex items-center justify-center shrink-0">
+                        #{userRank}
+                      </div>
+                      <div className="text-left truncate min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-white truncate">
+                            {tgUser?.first_name || 'You'}
+                          </span>
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shrink-0">
+                            ✨ YOU
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-zinc-400 block truncate">
+                          Need {Math.max(1, (leaderboard[9]?.weeklyReferralCount || 10) - weeklyReferralCount + 1)} more invites to enter Top 10!
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-black text-yellow-400 block">{weeklyReferralCount} Invites</span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -357,4 +409,3 @@ export function Friends() {
     </div>
   );
 }
-
