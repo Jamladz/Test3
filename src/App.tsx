@@ -13,17 +13,60 @@ export default function App() {
 
   useEffect(() => {
     // Detect Telegram WebApp user & start_param (referral code)
+    function getReferralCode(): string | null {
+      // 1. Telegram WebApp initDataUnsafe start_param
+      const tgParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+      if (tgParam) return tgParam.replace(/^ref_/, '');
+
+      // 2. URL search params (e.g. tgWebAppStartParam, startapp, start_param, ref)
+      try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const ref = searchParams.get('tgWebAppStartParam') || searchParams.get('startapp') || searchParams.get('start_param') || searchParams.get('ref');
+        if (ref) return ref.replace(/^ref_/, '');
+      } catch (e) {
+        // ignore
+      }
+
+      // 3. URL hash search params
+      try {
+        if (window.location.hash) {
+          const hashStr = window.location.hash.substring(1);
+          const hashParams = new URLSearchParams(hashStr);
+          const ref = hashParams.get('tgWebAppStartParam') || hashParams.get('startapp') || hashParams.get('start_param') || hashParams.get('ref');
+          if (ref) return ref.replace(/^ref_/, '');
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      // 4. Stored pending referral code in localStorage
+      try {
+        const stored = localStorage.getItem('plush_pending_ref_code');
+        if (stored) return stored;
+      } catch (e) {
+        // ignore
+      }
+
+      return null;
+    }
+
+    const refCode = getReferralCode();
+    if (refCode) {
+      try {
+        localStorage.setItem('plush_pending_ref_code', refCode);
+      } catch (e) {
+        // ignore
+      }
+    }
+
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.ready();
       window.Telegram.WebApp.expand();
 
       const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
-      const startParam = window.Telegram.WebApp.initDataUnsafe?.start_param;
-      const refCode = startParam ? startParam.replace('ref_', '') : null;
-
       initUser(tgUser, refCode);
     } else {
-      initUser();
+      initUser(undefined, refCode);
     }
   }, [initUser]);
 
