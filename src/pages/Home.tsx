@@ -185,7 +185,9 @@ export function Home() {
     depositGram, 
     createStakePool, 
     claimStakeYield,
-    unstakePool 
+    unstakePool,
+    welcomeBonusInfo,
+    dismissWelcomeBonus
   } = useAppStore();
 
   const [tonConnectUI] = useTonConnectUI();
@@ -367,8 +369,47 @@ export function Home() {
         </p>
       </div>
 
-      {/* Notifications */}
+      {/* Notifications & Welcome Referral Bonus */}
       <AnimatePresence>
+        {welcomeBonusInfo && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            className="w-full mb-5 bg-gradient-to-r from-amber-500/20 via-zinc-900 to-amber-500/20 border-2 border-amber-400 p-4 rounded-3xl text-white shadow-[0_0_30px_rgba(245,158,11,0.2)] relative overflow-hidden"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center shrink-0 text-amber-300">
+                  <Sparkles size={22} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                    🎁 Referral Welcome Bonus Received!
+                  </h4>
+                  <p className="text-xs text-zinc-200 mt-0.5 leading-snug">
+                    You joined via <strong className="text-white font-bold">{welcomeBonusInfo.referrerName}</strong>'s referral link!
+                  </p>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className="text-xs font-black text-amber-200 bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 rounded-lg">
+                      +{formatNumber(welcomeBonusInfo.plushP)} $PLUSH
+                    </span>
+                    <span className="text-xs font-black text-cyan-300 bg-cyan-500/20 border border-cyan-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                      <GramIcon size={12} /> +{welcomeBonusInfo.gram} GRAM
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={dismissWelcomeBonus}
+                className="text-zinc-400 hover:text-white bg-black/40 hover:bg-black/60 px-2 py-1 rounded-xl text-[10px] font-bold transition-all border border-zinc-700"
+              >
+                Dismiss
+              </button>
+            </div>
+          </motion.div>
+        )}
+
         {successMsg && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
