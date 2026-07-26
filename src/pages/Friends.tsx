@@ -16,8 +16,8 @@ export function Friends() {
   const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
   const userId = tgUser?.id ? String(tgUser.id) : '1982734';
   
-  const referralLink = `https://t.me/PlushPepeBot/app?startapp=ref_${userId}`;
-  const shareText = "🔥 Join me in the Plush Pepe Tap weekly referral contest! Win real GRAM (TON) rewards for every friend you invite!";
+  const referralLink = `https://t.me/PlushTap_bot/app?startapp=ref_${userId}`;
+  const shareText = "🔥 Join me on Plush Tap and win real GRAM (TON) rewards for every friend you invite!";
   const tgShareUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(shareText)}`;
 
   useEffect(() => {
@@ -49,6 +49,8 @@ export function Friends() {
   const handleShare = () => {
     if (window.Telegram?.WebApp?.openTelegramLink) {
       window.Telegram.WebApp.openTelegramLink(tgShareUrl);
+    } else if (window.Telegram?.WebApp?.openLink) {
+      window.Telegram.WebApp.openLink(tgShareUrl);
     } else {
       window.open(tgShareUrl, '_blank');
     }
