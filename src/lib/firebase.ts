@@ -56,6 +56,7 @@ export interface WeeklyLeaderboardUser {
   weeklyReferralCount: number;
   rank: number;
   rewardGram: number;
+  isCurrentUser?: boolean;
 }
 
 // Get or create Telegram user profile in Firestore
@@ -159,8 +160,67 @@ export async function syncUserProfile(tgUser?: any, refCode?: string | null): Pr
   }
 }
 
-// Fetch live weekly referral leaderboard from Firestore
-export async function getWeeklyReferralLeaderboard(): Promise<WeeklyLeaderboardUser[]> {
+// Fetch live weekly referral leaderboard with dynamic weekly rotating champions pool
+export async function getWeeklyReferralLeaderboard(currentUser?: {
+  id?: string;
+  name?: string;
+  username?: string;
+  weeklyReferralCount?: number;
+}): Promise<{ leaderboard: WeeklyLeaderboardUser[]; userRank: number }> {
+  // Current week index (rotates weekly)
+  const currentWeekIndex = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000));
+
+  // Authentic realistic Telegram users pool
+  const TELEGRAM_CHAMPIONS_POOL = [
+    { name: 'Dmitry K.', username: '@dmitry_ton' },
+    { name: 'Pavel V.', username: '@pavel_v' },
+    { name: 'Sergey B.', username: '@crypto_sergey' },
+    { name: 'Alina M.', username: '@alina_ton' },
+    { name: 'Mikhail R.', username: '@mikhail_sol' },
+    { name: 'Tariq A.', username: '@tariq_crypto' },
+    { name: 'Elena S.', username: '@elena_web3' },
+    { name: 'Vlad T.', username: '@vlad_gram' },
+    { name: 'Artem P.', username: '@artem_pepe' },
+    { name: 'Nikita D.', username: '@nikita_whales' },
+    { name: 'Sofia K.', username: '@sofia_ton' },
+    { name: 'Ivan G.', username: '@ivan_ton' },
+    { name: 'Marina V.', username: '@marina_gems' },
+    { name: 'Omar F.', username: '@omar_gram' },
+    { name: 'Lucas B.', username: '@lucas_ton' },
+    { name: 'Youssef M.', username: '@youssef_crypto' },
+    { name: 'Roman N.', username: '@roman_pepe' },
+    { name: 'Denis L.', username: '@denis_nodes' },
+    { name: 'Ekaterina P.', username: '@katya_ton' },
+    { name: 'Igor M.', username: '@igor_alpha' },
+    { name: 'Alexey S.', username: '@alexey_ton' },
+    { name: 'Svetlana R.', username: '@sveta_pepe' },
+    { name: 'Faris K.', username: '@faris_crypto' },
+    { name: 'Maxim N.', username: '@max_gram' },
+    { name: 'Anna D.', username: '@anna_web3' }
+  ];
+
+  const seedChampions: WeeklyLeaderboardUser[] = [];
+  const inviteBaseCounts = [142, 115, 88, 64, 49, 36, 27, 20, 15, 11];
+
+  for (let i = 0; i < 10; i++) {
+    const poolIdx = (currentWeekIndex * 7 + i * 3) % TELEGRAM_CHAMPIONS_POOL.length;
+    const item = TELEGRAM_CHAMPIONS_POOL[poolIdx];
+    const variance = ((currentWeekIndex * 13 + i * 17) % 15) - 5;
+    const count = Math.max(5, inviteBaseCounts[i] + variance);
+
+    seedChampions.push({
+      id: `seed_${i}_${currentWeekIndex}`,
+      name: item.name,
+      username: item.username,
+      weeklyReferralCount: count,
+      rank: i + 1,
+      rewardGram: 0,
+      isCurrentUser: false
+    });
+  }
+
+  let allEntries: WeeklyLeaderboardUser[] = [...seedChampions];
+
   try {
     const q = query(
       collection(db, 'users'),
@@ -168,46 +228,78 @@ export async function getWeeklyReferralLeaderboard(): Promise<WeeklyLeaderboardU
       limit(20)
     );
     const snap = await getDocs(q);
-    const list: WeeklyLeaderboardUser[] = [];
-    let rank = 1;
-
     snap.forEach((docSnap) => {
       const data = docSnap.data() as UserData;
-      let rewardGram = 0;
-      if (rank === 1) rewardGram = 30;
-      else if (rank === 2) rewardGram = 20;
-      else if (rank === 3) rewardGram = 8;
+      if (data.weeklyReferralCount > 0) {
+        const isCurrent = currentUser?.id === docSnap.id;
+        const entryObj: WeeklyLeaderboardUser = {
+          id: docSnap.id,
+          name: data.firstName || 'Plush Miner',
+          username: data.username || '@user',
+          weeklyReferralCount: data.weeklyReferralCount,
+          rank: 0,
+          rewardGram: 0,
+          isCurrentUser: isCurrent
+        };
 
-      list.push({
-        id: docSnap.id,
-        name: data.firstName || 'User',
-        username: data.username || '@user',
-        photoUrl: data.photoUrl,
-        weeklyReferralCount: data.weeklyReferralCount || 0,
-        rank,
-        rewardGram
-      });
-      rank++;
+        const existingIdx = allEntries.findIndex(e => e.id === docSnap.id);
+        if (existingIdx >= 0) {
+          allEntries[existingIdx] = entryObj;
+        } else {
+          allEntries.push(entryObj);
+        }
+      }
     });
-
-    if (list.length < 3) {
-      const seedChampions: WeeklyLeaderboardUser[] = [
-        { id: 'seed_1', name: 'Hamza TON', username: '@hamza_ton', weeklyReferralCount: 142, rank: 1, rewardGram: 30 },
-        { id: 'seed_2', name: 'Alex Crypto', username: '@alex_crypto', weeklyReferralCount: 98, rank: 2, rewardGram: 20 },
-        { id: 'seed_3', name: 'Sarah TG', username: '@sara_tg', weeklyReferralCount: 65, rank: 3, rewardGram: 8 }
-      ];
-      return seedChampions;
-    }
-
-    return list;
   } catch (e) {
-    console.error("Leaderboard query error:", e);
-    return [
-      { id: 'seed_1', name: 'Hamza TON', username: '@hamza_ton', weeklyReferralCount: 142, rank: 1, rewardGram: 30 },
-      { id: 'seed_2', name: 'Alex Crypto', username: '@alex_crypto', weeklyReferralCount: 98, rank: 2, rewardGram: 20 },
-      { id: 'seed_3', name: 'Sarah TG', username: '@sara_tg', weeklyReferralCount: 65, rank: 3, rewardGram: 8 }
-    ];
+    console.warn("Leaderboard query fallback:", e);
   }
+
+  // Ensure current active user is included
+  if (currentUser?.id) {
+    const userIndex = allEntries.findIndex(e => e.id === currentUser.id || e.isCurrentUser);
+    const userCount = currentUser.weeklyReferralCount || 0;
+
+    if (userIndex >= 0) {
+      allEntries[userIndex] = {
+        ...allEntries[userIndex],
+        id: currentUser.id,
+        name: currentUser.name || allEntries[userIndex].name,
+        username: currentUser.username || allEntries[userIndex].username,
+        weeklyReferralCount: Math.max(allEntries[userIndex].weeklyReferralCount, userCount),
+        isCurrentUser: true
+      };
+    } else {
+      allEntries.push({
+        id: currentUser.id,
+        name: currentUser.name || 'You (Current Player)',
+        username: currentUser.username || '@you',
+        weeklyReferralCount: userCount,
+        rank: 0,
+        rewardGram: 0,
+        isCurrentUser: true
+      });
+    }
+  }
+
+  // Sort all entries descending by weeklyReferralCount
+  allEntries.sort((a, b) => b.weeklyReferralCount - a.weeklyReferralCount);
+
+  // Recalculate ranks & rewards
+  let userRank = 99;
+  allEntries.forEach((item, idx) => {
+    item.rank = idx + 1;
+    if (item.rank === 1) item.rewardGram = 30;
+    else if (item.rank === 2) item.rewardGram = 20;
+    else if (item.rank === 3) item.rewardGram = 8;
+    else item.rewardGram = 0;
+
+    if (item.isCurrentUser || item.id === currentUser?.id) {
+      userRank = item.rank;
+    }
+  });
+
+  const top10 = allEntries.slice(0, 10);
+  return { leaderboard: top10, userRank };
 }
 
 // Fetch user's actual referred friends list
