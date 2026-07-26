@@ -44,6 +44,7 @@ export interface UserData {
   userMiningCards?: Record<string, { lastClaimTime: number; purchased?: boolean }>;
   depositedGramBalance?: number;
   activeStakes?: any[];
+  welcomeReferralBonus?: { plushP: number; gram: number; referrerName: string };
   createdAt?: any;
   updatedAt?: any;
 }
@@ -69,6 +70,29 @@ export interface ReferredUserLog {
   date: string;
 }
 
+// Helper to look up referrer document using clean digits, tg_ prefix, or raw ref code
+export async function findReferrerDoc(rawRefCode: string) {
+  if (!rawRefCode) return null;
+  const clean = rawRefCode.replace(/^ref_/, '');
+  const digits = clean.replace(/^tg_/, '');
+  const tgPrefixed = `tg_${digits}`;
+
+  const candidates = Array.from(new Set([clean, digits, tgPrefixed])).filter(Boolean);
+
+  for (const cid of candidates) {
+    try {
+      const ref = doc(db, 'users', cid);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        return { ref, snap, referrerUid: cid };
+      }
+    } catch (e) {
+      console.warn(`Error checking referrer candidate ${cid}:`, e);
+    }
+  }
+  return null;
+}
+
 // Get or create Telegram user profile in Firestore
 export async function syncUserProfile(tgUser?: any, refCode?: string | null): Promise<{ userDoc: UserData; uid: string }> {
   let uid = tgUser?.id ? String(tgUser.id) : null;
@@ -90,38 +114,56 @@ export async function syncUserProfile(tgUser?: any, refCode?: string | null): Pr
 
   if (snap.exists()) {
     const data = snap.data() as UserData;
-    // If existing user has no referredBy set, but joined with refCode, process referral
-    if (refCode && !data.referredBy && refCode !== uid) {
+    // If existing user has no referredBy set, but joined with refCode, process dual referral rewards
+    if (refCode && !data.referredBy) {
       try {
-        const referrerRef = doc(db, 'users', refCode);
-        const refSnap = await getDoc(referrerRef);
-        if (refSnap.exists()) {
+        const refInfo = await findReferrerDoc(refCode);
+        if (refInfo && refInfo.referrerUid !== uid && refInfo.referrerUid !== uid.replace(/^tg_/, '')) {
           const isPrem = Boolean(tgUser?.is_premium);
-          const rewardPlushP = isPrem ? 10000000 : 2000000;
-          const rewardGram = isPrem ? 0.025 : 0.005;
-          await updateDoc(referrerRef, {
+          const referrerPlushP = isPrem ? 10000000 : 2000000;
+          const referrerGram = isPrem ? 0.025 : 0.005;
+
+          const referredPlushP = isPrem ? 5000000 : 1000000;
+          const referredGram = isPrem ? 0.010 : 0.002;
+
+          // 1. Reward Referrer (المحيل)
+          await updateDoc(refInfo.ref, {
             weeklyReferralCount: increment(1),
             totalReferrals: increment(1),
-            balance: increment(rewardPlushP),
-            gramBalance: increment(rewardGram)
+            balance: increment(referrerPlushP),
+            gramBalance: increment(referrerGram)
           });
-          
-          const refLogRef = doc(collection(db, 'users', refCode, 'referrals'));
+
+          const refLogRef = doc(collection(db, 'users', refInfo.referrerUid, 'referrals'));
           await setDoc(refLogRef, {
             referredUserId: uid,
             referredName: data.firstName || tgUser?.first_name || 'Plush Miner',
             referredUsername: data.username || (tgUser?.username ? `@${tgUser.username}` : '@user'),
             isPremium: isPrem,
-            rewardPlushP: rewardPlushP,
-            rewardGram: rewardGram,
+            rewardPlushP: referrerPlushP,
+            rewardGram: referrerGram,
             createdAt: new Date().toISOString()
           });
 
+          // 2. Reward Referred User (المحال)
+          const bonusObj = {
+            plushP: referredPlushP,
+            gram: referredGram,
+            referrerName: refInfo.snap.data()?.firstName || 'Friend'
+          };
+          data.balance = (data.balance || 0) + referredPlushP;
+          data.gramBalance = Math.round(((data.gramBalance || 0.5) + referredGram) * 1000) / 1000;
+          data.referredBy = refInfo.referrerUid;
+          data.welcomeReferralBonus = bonusObj;
+
           await updateDoc(userRef, {
-            referredBy: refCode,
+            balance: increment(referredPlushP),
+            gramBalance: increment(referredGram),
+            referredBy: refInfo.referrerUid,
+            welcomeReferralBonus: bonusObj,
             updatedAt: serverTimestamp()
           });
-          data.referredBy = refCode;
+
           try { localStorage.removeItem('plush_pending_ref_code'); } catch (e) {}
         }
       } catch (e) {
@@ -142,17 +184,68 @@ export async function syncUserProfile(tgUser?: any, refCode?: string | null): Pr
     const season1Rank = 150 + (numericHash % 850);
     const season1Allocation = Math.floor(season1Mined / 100);
 
+    let welcomeBonusObj: { plushP: number; gram: number; referrerName: string } | undefined = undefined;
+    let initialBalance = 0;
+    let initialGramBalance = 0.5; // First-time base welcome bonus 0.5 GRAM
+    let assignedReferredBy: string | null = null;
+
+    if (refCode) {
+      try {
+        const refInfo = await findReferrerDoc(refCode);
+        if (refInfo && refInfo.referrerUid !== uid && refInfo.referrerUid !== uid.replace(/^tg_/, '')) {
+          const isPrem = Boolean(tgUser?.is_premium);
+          const referrerPlushP = isPrem ? 10000000 : 2000000;
+          const referrerGram = isPrem ? 0.025 : 0.005;
+
+          const referredPlushP = isPrem ? 5000000 : 1000000;
+          const referredGram = isPrem ? 0.010 : 0.002;
+
+          // 1. Reward Referrer (المحيل)
+          await updateDoc(refInfo.ref, {
+            weeklyReferralCount: increment(1),
+            totalReferrals: increment(1),
+            balance: increment(referrerPlushP),
+            gramBalance: increment(referrerGram)
+          });
+
+          const refLogRef = doc(collection(db, 'users', refInfo.referrerUid, 'referrals'));
+          await setDoc(refLogRef, {
+            referredUserId: uid,
+            referredName: tgUser?.first_name || 'Plush Miner',
+            referredUsername: tgUser?.username ? `@${tgUser.username}` : '@user',
+            isPremium: isPrem,
+            rewardPlushP: referrerPlushP,
+            rewardGram: referrerGram,
+            createdAt: new Date().toISOString()
+          });
+
+          // 2. Setup Referred User (المحال) rewards
+          initialBalance += referredPlushP;
+          initialGramBalance = Math.round((initialGramBalance + referredGram) * 1000) / 1000;
+          assignedReferredBy = refInfo.referrerUid;
+          welcomeBonusObj = {
+            plushP: referredPlushP,
+            gram: referredGram,
+            referrerName: refInfo.snap.data()?.firstName || 'Friend'
+          };
+          try { localStorage.removeItem('plush_pending_ref_code'); } catch (e) {}
+        }
+      } catch (err) {
+        console.error("Error processing new user referral:", err);
+      }
+    }
+
     const newUser: UserData = {
       telegramId: uid,
       firstName: tgUser?.first_name || 'Plush Miner',
       lastName: tgUser?.last_name || '',
       username: tgUser?.username ? `@${tgUser.username}` : `@user_${uid.slice(-4)}`,
       photoUrl: tgUser?.photo_url || '',
-      balance: 0, // Season 2 balance starts strictly from 0
-      gramBalance: 0.5, // First-time welcome bonus 0.5 GRAM
+      balance: initialBalance,
+      gramBalance: initialGramBalance,
       lastMiningStartTime: null,
       tasksCompleted: [],
-      referredBy: refCode || null,
+      referredBy: assignedReferredBy,
       weeklyReferralCount: 0,
       totalReferrals: 0,
       walletAddress: '',
@@ -166,45 +259,12 @@ export async function syncUserProfile(tgUser?: any, refCode?: string | null): Pr
       userMiningCards: {},
       depositedGramBalance: 0,
       activeStakes: [],
+      welcomeReferralBonus: welcomeBonusObj,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
 
     await setDoc(userRef, newUser);
-
-    // Record referral if user joined via a referral link
-    if (refCode && refCode !== uid) {
-      try {
-        const referrerRef = doc(db, 'users', refCode);
-        const refSnap = await getDoc(referrerRef);
-        if (refSnap.exists()) {
-          const isPrem = Boolean(tgUser?.is_premium);
-          const rewardPlushP = isPrem ? 10000000 : 2000000;
-          const rewardGram = isPrem ? 0.025 : 0.005;
-          await updateDoc(referrerRef, {
-            weeklyReferralCount: increment(1),
-            totalReferrals: increment(1),
-            balance: increment(rewardPlushP),
-            gramBalance: increment(rewardGram)
-          });
-          
-          const refLogRef = doc(collection(db, 'users', refCode, 'referrals'));
-          await setDoc(refLogRef, {
-            referredUserId: uid,
-            referredName: newUser.firstName,
-            referredUsername: newUser.username,
-            isPremium: isPrem,
-            rewardPlushP: rewardPlushP,
-            rewardGram: rewardGram,
-            createdAt: new Date().toISOString()
-          });
-          try { localStorage.removeItem('plush_pending_ref_code'); } catch (e) {}
-        }
-      } catch (err) {
-        console.error("Error processing referral:", err);
-      }
-    }
-
     return { userDoc: newUser, uid };
   }
 }
@@ -354,22 +414,30 @@ export async function getWeeklyReferralLeaderboard(currentUser?: {
 // Fetch user's actual referred friends list
 export async function getUserReferrals(uid: string): Promise<ReferredUserLog[]> {
   try {
-    const refCol = collection(db, 'users', uid, 'referrals');
-    const snap = await getDocs(refCol);
-    const list: any[] = [];
-    snap.forEach((d) => {
-      const data = d.data();
-      list.push({
-        id: d.id,
-        name: data.referredName || 'Referred Friend',
-        username: data.referredUsername || '@user',
-        isPremium: Boolean(data.isPremium),
-        reward: data.rewardPlushP || 2000000,
-        gramReward: data.rewardGram || 0.005,
-        date: data.createdAt ? new Date(data.createdAt).toLocaleDateString() : 'Recently'
-      });
-    });
-    return list;
+    const candidates = [uid, uid.replace(/^tg_/, ''), `tg_${uid.replace(/^tg_/, '')}`];
+    const uniqueCandidates = Array.from(new Set(candidates)).filter(Boolean);
+
+    for (const cid of uniqueCandidates) {
+      const refCol = collection(db, 'users', cid, 'referrals');
+      const snap = await getDocs(refCol);
+      if (!snap.empty) {
+        const list: ReferredUserLog[] = [];
+        snap.forEach((d) => {
+          const data = d.data();
+          list.push({
+            id: d.id,
+            name: data.referredName || 'Referred Friend',
+            username: data.referredUsername || '@user',
+            isPremium: Boolean(data.isPremium),
+            reward: data.rewardPlushP || 2000000,
+            gramReward: data.rewardGram || 0.005,
+            date: data.createdAt ? new Date(data.createdAt).toLocaleDateString() : 'Recently'
+          });
+        });
+        return list;
+      }
+    }
+    return [];
   } catch (err) {
     console.error("Error fetching user referrals:", err);
     return [];
