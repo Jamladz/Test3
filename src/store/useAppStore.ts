@@ -52,9 +52,11 @@ interface AppState {
   depositedGramBalance: number;
   activeStakes: ActiveStake[];
   isLoading: boolean;
+  welcomeBonusInfo?: { plushP: number; gram: number; referrerName: string } | null;
 
   // Actions
   initUser: (tgUser?: any, refCode?: string | null) => Promise<void>;
+  dismissWelcomeBonus: () => void;
   startMining: () => Promise<void>;
   collectMining: (amount: number) => Promise<void>;
   completeTask: (taskId: string, reward: number) => Promise<void>;
@@ -109,6 +111,7 @@ export const useAppStore = create<AppState>()(
       depositedGramBalance: 0,
       activeStakes: [],
       isLoading: false,
+      welcomeBonusInfo: null,
 
       initUser: async (tgUser?: any, refCode?: string | null) => {
         set({ isLoading: true });
@@ -137,12 +140,17 @@ export const useAppStore = create<AppState>()(
             userMiningCards: userDoc.userMiningCards ?? state.userMiningCards ?? {},
             depositedGramBalance: userDoc.depositedGramBalance ?? state.depositedGramBalance ?? 0,
             activeStakes: userDoc.activeStakes ?? state.activeStakes ?? [],
+            welcomeBonusInfo: userDoc.welcomeReferralBonus || state.welcomeBonusInfo || null,
             isLoading: false
           }));
         } catch (err) {
           console.error("Firebase sync error:", err);
           set({ isLoading: false });
         }
+      },
+
+      dismissWelcomeBonus: () => {
+        set({ welcomeBonusInfo: null });
       },
 
       startMining: async () => {
