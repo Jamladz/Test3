@@ -1,67 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Global Safety Net
     match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // Helper functions
-    function incoming() { return request.resource.data; }
-    function existing() { return resource.data; }
-    function isSignedIn() { return request.auth != null; }
-    function isOwner(userId) { 
-      // Since this is a Telegram Mini App, the true identity is the Telegram ID, not the Firebase Anonymous UID.
-      // Without backend-minted Custom Tokens, we cannot securely verify the Telegram ID in Firestore Rules.
-      // We rely on the client or require a backend. For this preview, we relax ownership to signed-in users.
-      return isSignedIn(); 
-    }
-
-    function isAdmin() {
-      // Allow if they are in the admins collection (console added)
-      // or if their role is admin
-      return isSignedIn() && (
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'admin') ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('username', '') == 'sekanedr_is') ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('username', '') == 'test_user') ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('username', '') == 'test_dev_user')
-      );
-    }
-
-    // User Schema Validation
-    function isValidUser(data) {
-      return data.keys().hasAll(['id', 'balance', 'energy', 'lastLogin']) 
-        && data.balance is number 
-        && data.energy is number 
-        && data.lastLogin is number;
-    }
-
-    match /admins/{adminId} {
-      allow read: if isSignedIn();
-      allow write: if false; // Only manageable via console
-    }
-
-    match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isOwner(userId) && isValidUser(incoming());
-
-      // Update rules (Anti-Cheat logic)
-      allow update: if isOwner(userId) && isValidUser(incoming()) && (
-        (incoming().get('role', 'user') == existing().get('role', 'user'))
-      ) || isAdmin();
-    }
-    
-    match /matches/{matchId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-    
-    // Referrals (Managed entirely by Cloudflare Worker/Server via Admin SDK)
-    match /referrals/{referralId} {
-       allow read: if isSignedIn() && (isOwner(referralId) || resource.data.referrerId == request.auth.uid || resource.data.referredId == request.auth.uid);
-       allow write: if false; // Only manageable via Cloudflare Worker / Admin SDK
+      allow read, write: if true;
     }
   }
 }

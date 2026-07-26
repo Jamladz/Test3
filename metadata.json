@@ -1,6 +1,6 @@
 {
-  "name": "PlushTap",
-  "description": "PlushTap Web3 Telegram Game",
+  "name": "Plush Pepe Tap",
+  "description": "Plush Pepe Tap - Telegram Mini App & Airdrop Portal",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

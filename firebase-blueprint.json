@@ -1,72 +1,45 @@
 {
   "entities": {
-    "User": {
-      "title": "User",
-      "description": "A player in the game",
+    "users": {
+      "title": "Users",
+      "description": "Registered Telegram Mini App Users",
       "type": "object",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Telegram user ID as string"
-        },
-        "username": {
-          "type": "string"
-        },
-        "firstName": {
-          "type": "string"
-        },
-        "balance": {
-          "type": "number",
-          "description": "Coin balance"
-        },
-        "energy": {
-          "type": "number"
-        },
-        "maxEnergy": {
-          "type": "number"
-        },
-        "profitPerHour": {
-          "type": "number"
-        },
-        "lastLogin": {
-          "type": "number",
-          "description": "Timestamp"
-        },
-        "role": {
-          "type": "string",
-          "enum": ["user", "admin"]
-        },
-        "friendsCount": {
-          "type": "number"
-        },
-        "adsWatched": {
-          "type": "number"
-        },
-        "upgrades": {
-          "type": "object",
-          "description": "Map of upgradeId to level"
-        },
-        "missions": {
-          "type": "array",
-          "items": { "type": "string" }
-        },
-        "walletAddress": {
-          "type": "string"
-        },
-        "referredBy": {
-          "type": "string",
-          "description": "ID of the user who referred this user"
-        }
+        "telegramId": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "username": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "balance": { "type": "number" },
+        "lastMiningStartTime": { "type": "number" },
+        "miningDurationMs": { "type": "number" },
+        "tasksCompleted": { "type": "array", "items": { "type": "string" } },
+        "referredBy": { "type": "string" },
+        "weeklyReferralCount": { "type": "number" },
+        "totalReferrals": { "type": "number" },
+        "walletAddress": { "type": "string" },
+        "season1MinedTokens": { "type": "number" },
+        "season1Rank": { "type": "number" },
+        "season1Claimed": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
       },
-      "required": ["id", "balance", "energy", "maxEnergy", "profitPerHour", "lastLogin"]
-    }
-  },
-  "firestore": {
-    "/users/{userId}": {
-      "schema": {
-        "$ref": "#/entities/User"
+      "required": ["telegramId", "balance"]
+    },
+    "referrals": {
+      "title": "Referrals",
+      "description": "Log of verified referrals",
+      "type": "object",
+      "properties": {
+        "referrerId": { "type": "string" },
+        "referredUserId": { "type": "string" },
+        "referredUserName": { "type": "string" },
+        "referredUsername": { "type": "string" },
+        "isPremium": { "type": "boolean" },
+        "rewardTokens": { "type": "number" },
+        "createdAt": { "type": "string" }
       },
-      "description": "User profiles and game state."
+      "required": ["referrerId", "referredUserId"]
     }
   }
 }
