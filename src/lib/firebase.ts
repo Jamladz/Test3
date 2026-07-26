@@ -59,6 +59,16 @@ export interface WeeklyLeaderboardUser {
   isCurrentUser?: boolean;
 }
 
+export interface ReferredUserLog {
+  id: string;
+  name: string;
+  username: string;
+  isPremium: boolean;
+  reward: number;
+  gramReward: number;
+  date: string;
+}
+
 // Get or create Telegram user profile in Firestore
 export async function syncUserProfile(tgUser?: any, refCode?: string | null): Promise<{ userDoc: UserData; uid: string }> {
   let uid = tgUser?.id ? String(tgUser.id) : null;
@@ -80,11 +90,49 @@ export async function syncUserProfile(tgUser?: any, refCode?: string | null): Pr
 
   if (snap.exists()) {
     const data = snap.data() as UserData;
-    // Update active timestamp
-    try {
-      await updateDoc(userRef, { updatedAt: serverTimestamp() });
-    } catch (e) {
-      // ignore
+    // If existing user has no referredBy set, but joined with refCode, process referral
+    if (refCode && !data.referredBy && refCode !== uid) {
+      try {
+        const referrerRef = doc(db, 'users', refCode);
+        const refSnap = await getDoc(referrerRef);
+        if (refSnap.exists()) {
+          const isPrem = Boolean(tgUser?.is_premium);
+          const rewardPlushP = isPrem ? 10000000 : 2000000;
+          const rewardGram = isPrem ? 0.025 : 0.005;
+          await updateDoc(referrerRef, {
+            weeklyReferralCount: increment(1),
+            totalReferrals: increment(1),
+            balance: increment(rewardPlushP),
+            gramBalance: increment(rewardGram)
+          });
+          
+          const refLogRef = doc(collection(db, 'users', refCode, 'referrals'));
+          await setDoc(refLogRef, {
+            referredUserId: uid,
+            referredName: data.firstName || tgUser?.first_name || 'Plush Miner',
+            referredUsername: data.username || (tgUser?.username ? `@${tgUser.username}` : '@user'),
+            isPremium: isPrem,
+            rewardPlushP: rewardPlushP,
+            rewardGram: rewardGram,
+            createdAt: new Date().toISOString()
+          });
+
+          await updateDoc(userRef, {
+            referredBy: refCode,
+            updatedAt: serverTimestamp()
+          });
+          data.referredBy = refCode;
+          try { localStorage.removeItem('plush_pending_ref_code'); } catch (e) {}
+        }
+      } catch (e) {
+        console.error("Error processing existing user referral:", e);
+      }
+    } else {
+      try {
+        await updateDoc(userRef, { updatedAt: serverTimestamp() });
+      } catch (e) {
+        // ignore
+      }
     }
     return { userDoc: data, uid };
   } else {
@@ -150,6 +198,7 @@ export async function syncUserProfile(tgUser?: any, refCode?: string | null): Pr
             rewardGram: rewardGram,
             createdAt: new Date().toISOString()
           });
+          try { localStorage.removeItem('plush_pending_ref_code'); } catch (e) {}
         }
       } catch (err) {
         console.error("Error processing referral:", err);
@@ -303,7 +352,7 @@ export async function getWeeklyReferralLeaderboard(currentUser?: {
 }
 
 // Fetch user's actual referred friends list
-export async function getUserReferrals(uid: string) {
+export async function getUserReferrals(uid: string): Promise<ReferredUserLog[]> {
   try {
     const refCol = collection(db, 'users', uid, 'referrals');
     const snap = await getDocs(refCol);
